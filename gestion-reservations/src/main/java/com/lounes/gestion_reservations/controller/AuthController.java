@@ -5,6 +5,7 @@ import com.lounes.gestion_reservations.dto.LoginRequest;
 import com.lounes.gestion_reservations.dto.SignupRequest;
 import com.lounes.gestion_reservations.model.*;
 import com.lounes.gestion_reservations.repo.ClientRepository;
+import com.lounes.gestion_reservations.repo.EntrepriseRepository;
 import com.lounes.gestion_reservations.repo.RoleRepository;
 import com.lounes.gestion_reservations.repo.UserRepository;
 import com.lounes.gestion_reservations.security.JwtUtils;
@@ -20,7 +21,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,7 +37,9 @@ public class AuthController {
     @Autowired private ClientRepository clientRepository;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JwtUtils jwtUtils;
+    @Autowired private EntrepriseRepository entrepriseRepository;
 
+    // ─── LOGIN ────────────────────────────────────────────────────────────────
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
@@ -49,10 +51,37 @@ public class AuthController {
                 .map(item -> item.getAuthority()).collect(Collectors.toList());
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Long entrepriseId = resolveEntrepriseId(user, roles);
+
         return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(),
-                userDetails.getUsername(), user.getNom(), user.getPrenom(), roles));
+                userDetails.getUsername(), user.getNom(), user.getPrenom(), roles, entrepriseId));
     }
 
+    // ─── REFRESH PROFILE ─────────────────────────────────────────────────────
+    // Permet au gérant de récupérer son entrepriseId à jour sans se reconnecter
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getMe() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        List<String> roles = user.getRoles().stream()
+                .map(r -> r.getName().name())
+                .collect(Collectors.toList());
+        Long entrepriseId = resolveEntrepriseId(user, roles);
+
+        return ResponseEntity.ok(Map.of(
+                "id",           user.getId(),
+                "email",        user.getEmail(),
+                "nom",          user.getNom(),
+                "prenom",       user.getPrenom(),
+                "roles",        roles,
+                "entrepriseId", entrepriseId != null ? entrepriseId : ""
+        ));
+    }
+
+    // ─── SIGNUP ───────────────────────────────────────────────────────────────
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest signupRequest) {
         if (userRepository.existsByEmail(signupRequest.getEmail()))
@@ -78,10 +107,11 @@ public class AuthController {
 
         return ResponseEntity.ok(Map.of(
                 "message", "Compte client créé avec succès !",
-                "id", savedUser.getId(),
-                "email", savedUser.getEmail()));
+                "id",      savedUser.getId(),
+                "email",   savedUser.getEmail()));
     }
 
+    // ─── CREATE GÉRANT ────────────────────────────────────────────────────────
     @PostMapping("/create-gerant")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> createGerant(@Valid @RequestBody SignupRequest signupRequest) {
@@ -98,11 +128,21 @@ public class AuthController {
         Role gerantRole = roleRepository.findByName(ERole.ROLE_GERANT)
                 .orElseThrow(() -> new RuntimeException("Role GERANT non trouvé"));
         user.setRoles(Set.of(gerantRole));
-        User savedUser = userRepository.save(user);
+        userRepository.save(user);
 
         return ResponseEntity.ok(Map.of(
                 "message", "Compte gérant créé avec succès !",
-                "id", savedUser.getId(),
-                "email", savedUser.getEmail()));
+                "id",      user.getId(),
+                "email",   user.getEmail()));
     }
-}
+
+    // ─── HELPER ───────────────────────────────────────────────────────────────
+    private Long resolveEntrepriseId(User user, List<String> roles) {
+        if (roles.contains("ROLE_GERANT")) {
+            return entrepriseRepository.findByGerantId(user.getId())
+                    .map(e -> e.getId())
+                    .orElse(null);
+        }
+        return null;
+    }
+}   
