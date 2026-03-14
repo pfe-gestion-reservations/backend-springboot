@@ -1,22 +1,20 @@
 package com.lounes.gestion_reservations.dto;
 
+import java.util.List;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-
-@NoArgsConstructor
 public class ClientResponse {
     private Long id;
     private String nom;
     private String prenom;
     private String email;
     private String numtel;
-    private Boolean archived;   // ← remplace actif
-    private String createdBy;   // ← email du créateur (String)
+    private Boolean archived;
+    private String createdBy;
+    private List<EntrepriseInfo> entreprises; // NOUVEAU
 
-    public ClientResponse(Long id, String nom, String prenom, String email, String numtel, Boolean archived, String createdBy) {
+    // Constructeur existant (sans entreprises — pour compatibilité)
+    public ClientResponse(Long id, String nom, String prenom, String email,
+                          String numtel, Boolean archived, String createdBy) {
         this.id = id;
         this.nom = nom;
         this.prenom = prenom;
@@ -26,59 +24,31 @@ public class ClientResponse {
         this.createdBy = createdBy;
     }
 
-    public Long getId() {
-        return id;
+    // Sous-classe pour les infos entreprise
+    public static class EntrepriseInfo {
+        private Long id;
+        private String nom;
+        private String secteur;
+
+        public EntrepriseInfo(Long id, String nom, String secteur) {
+            this.id = id;
+            this.nom = nom;
+            this.secteur = secteur;
+        }
+
+        public Long getId() { return id; }
+        public String getNom() { return nom; }
+        public String getSecteur() { return secteur; }
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getNom() {
-        return nom;
-    }
-
-    public void setNom(String nom) {
-        this.nom = nom;
-    }
-
-    public String getPrenom() {
-        return prenom;
-    }
-
-    public void setPrenom(String prenom) {
-        this.prenom = prenom;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getNumtel() {
-        return numtel;
-    }
-
-    public void setNumtel(String numtel) {
-        this.numtel = numtel;
-    }
-
-    public Boolean getArchived() {
-        return archived;
-    }
-
-    public void setArchived(Boolean archived) {
-        this.archived = archived;
-    }
-
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
-    }
+    // Getters & Setters
+    public Long getId() { return id; }
+    public String getNom() { return nom; }
+    public String getPrenom() { return prenom; }
+    public String getEmail() { return email; }
+    public String getNumtel() { return numtel; }
+    public Boolean getArchived() { return archived; }
+    public String getCreatedBy() { return createdBy; }
+    public List<EntrepriseInfo> getEntreprises() { return entreprises; }
+    public void setEntreprises(List<EntrepriseInfo> entreprises) { this.entreprises = entreprises; }
 }

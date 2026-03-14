@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
@@ -53,13 +54,15 @@ public class GerantController {
         }
     }
 
-    // Archiver un gérant — remplaçantId obligatoire si le gérant a une entreprise
-    // Passer remplacantId=null si le gérant n'a pas d'entreprise
+    // Archiver un gérant — remplaçantId accepté en query param OU dans le body
     @PatchMapping("/{id}/archiver")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> archiver(@PathVariable Long id,
-                                      @RequestParam(required = false) Long remplacantId) {
-        return ResponseEntity.ok(gerantService.archiver(id, remplacantId));
+                                      @RequestParam(required = false) Long remplacantId,
+                                      @RequestBody(required = false) java.util.Map<String, Long> body) {
+        Long rId = remplacantId != null ? remplacantId
+                : (body != null ? body.get("remplacantId") : null);
+        return ResponseEntity.ok(gerantService.archiver(id, rId));
     }
 
     @PatchMapping("/{id}/desarchiver")

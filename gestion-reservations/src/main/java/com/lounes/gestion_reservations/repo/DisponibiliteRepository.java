@@ -22,4 +22,5 @@ public interface DisponibiliteRepository extends JpaRepository<Disponibilite, Lo
             LocalTime heureDebut,
             LocalTime heureFin
     );
+
 }

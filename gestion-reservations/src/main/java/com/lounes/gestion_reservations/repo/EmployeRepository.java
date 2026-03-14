@@ -12,8 +12,9 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
     Optional<Employe> findByUser(User user);
     Optional<Employe> findByUserId(Long userId);
     List<Employe> findByEntreprise(Entreprise entreprise);
-    // Employé actif (non archivé) pour un user donné
     Optional<Employe> findByUserIdAndArchivedFalse(Long userId);
-    // Tous les profils employé d'un user (peut en avoir plusieurs dans différentes entreprises)
     List<Employe> findAllByUserId(Long userId);
+
+    // Recherche directe dans la table employe par email du user associé
+    Optional<Employe> findByUserEmail(String email);
 }

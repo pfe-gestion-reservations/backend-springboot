@@ -94,6 +94,14 @@ public class ServiceService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service non trouvé")));
     }
 
+    // ── Tous les services d'une entreprise donnée (pour SUPER_ADMIN) ──────────
+    public List<ServiceResponse> getByEntreprise(Long entrepriseId) {
+        Entreprise e = entrepriseRepository.findById(entrepriseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise non trouvée"));
+        return serviceRepository.findByEntreprise(e).stream()
+                .map(this::toResponse).collect(Collectors.toList());
+    }
+
     // ── CREATE ─────────────────────────────────────────────
 
     @Transactional

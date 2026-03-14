@@ -72,9 +72,16 @@ public class GerantService {
                     user.getId(), user.getNom(), user.getPrenom(), user.getEmail());
         }
 
-        // Compte existe mais libre (archivé ou sans entreprise)
-        return new EmployeCheckResponse("LIBRE",
-                "Ce compte existe déjà. Voulez-vous l'utiliser comme gérant ?",
+        // Gérant archivé → proposer désarchivage
+        if (Boolean.TRUE.equals(user.getArchived())) {
+            return new EmployeCheckResponse("LIBRE",
+                    "Ce gérant est archivé. Voulez-vous le désarchiver ?",
+                    user.getId(), user.getNom(), user.getPrenom(), user.getEmail());
+        }
+
+        // Gérant actif sans entreprise → compte gérant déjà existant, bloquer
+        return new EmployeCheckResponse("OCCUPE",
+                "Ce mail a déjà un compte gérant actif dans le système.",
                 user.getId(), user.getNom(), user.getPrenom(), user.getEmail());
     }
 
@@ -153,6 +160,14 @@ public class GerantService {
     }
 
     private GerantResponse toResponse(User u) {
-        return new GerantResponse(u.getId(), u.getNom(), u.getPrenom(), u.getEmail(), u.getArchived());
+        GerantResponse r = new GerantResponse(u.getId(), u.getNom(), u.getPrenom(), u.getEmail(), u.getArchived());
+        entrepriseRepository.findByGerantId(u.getId()).ifPresent(e -> {
+            r.setEntrepriseId(e.getId());
+            r.setEntrepriseNom(e.getNom());
+            r.setEntrepriseAdresse(e.getAdresse());
+            r.setEntrepriseTelephone(e.getTelephone());
+            if (e.getSecteur() != null) r.setEntrepriseSecteur(e.getSecteur().getNom());
+        });
+        return r;
     }
 }

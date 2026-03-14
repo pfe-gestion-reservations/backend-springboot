@@ -43,6 +43,13 @@ public class EntrepriseController {
         return ResponseEntity.ok(entrepriseService.update(id, request));
     }
 
+    // ✅ GET /api/entreprises/by-secteur/{secteurId} — filtrer par secteur
+    @GetMapping("/by-secteur/{secteurId}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<List<EntrepriseResponse>> getBySecteur(@PathVariable Long secteurId) {
+        return ResponseEntity.ok(entrepriseService.getBySecteur(secteurId));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id) {

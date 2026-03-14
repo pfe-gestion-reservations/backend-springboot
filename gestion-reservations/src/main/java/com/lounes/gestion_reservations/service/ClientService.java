@@ -2,16 +2,8 @@ package com.lounes.gestion_reservations.service;
 
 import com.lounes.gestion_reservations.dto.ClientRequest;
 import com.lounes.gestion_reservations.dto.ClientResponse;
-import com.lounes.gestion_reservations.model.Client;
-import com.lounes.gestion_reservations.model.ERole;
-import com.lounes.gestion_reservations.model.Employe;
-import com.lounes.gestion_reservations.model.Role;
-import com.lounes.gestion_reservations.model.User;
-import com.lounes.gestion_reservations.repo.ClientRepository;
-import com.lounes.gestion_reservations.repo.EmployeRepository;
-import com.lounes.gestion_reservations.repo.EntrepriseRepository;
-import com.lounes.gestion_reservations.repo.RoleRepository;
-import com.lounes.gestion_reservations.repo.UserRepository;
+import com.lounes.gestion_reservations.model.*;
+import com.lounes.gestion_reservations.repo.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,10 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,8 +24,6 @@ public class ClientService {
     @Autowired private UserRepository userRepository;
     @Autowired private RoleRepository roleRepository;
     @Autowired private PasswordEncoder passwordEncoder;
-
-    // ───── Utilitaires ─────────────────────────────────────
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -70,8 +57,21 @@ public class ClientService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès refusé !");
     }
 
+    private Entreprise resolveEntreprise(User currentUser, Long entrepriseId) {
+        if (isSuperAdmin(currentUser)) {
+            if (entrepriseId == null) return null;
+            return entrepriseRepository.findById(entrepriseId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise non trouvée"));
+        } else if (isGerant(currentUser)) {
+            return entrepriseRepository.findByGerantId(currentUser.getId()).orElse(null);
+        } else {
+            Employe emp = employeRepository.findByUser(currentUser).orElse(null);
+            return emp != null ? emp.getEntreprise() : null;
+        }
+    }
+
     private ClientResponse toResponse(Client client) {
-        return new ClientResponse(
+        ClientResponse resp = new ClientResponse(
                 client.getId(),
                 client.getUser().getNom(),
                 client.getUser().getPrenom(),
@@ -80,30 +80,133 @@ public class ClientService {
                 client.getArchived(),
                 client.getCreatedBy()
         );
+        List<ClientResponse.EntrepriseInfo> entrepriseInfos = client.getEntreprises().stream()
+                .map(e -> new ClientResponse.EntrepriseInfo(
+                        e.getId(), e.getNom(),
+                        e.getSecteur() != null ? e.getSecteur().getNom() : null
+                ))
+                .collect(Collectors.toList());
+        resp.setEntreprises(entrepriseInfos);
+        return resp;
     }
 
-    // ───── CRUD ────────────────────────────────────────────
+    // ─── CHECK TÉLÉPHONE ──────────────────────────────────────────────────────
+    // Statuts : NOT_FOUND | ALREADY_TAKEN
+    public Map<String, Object> findByTelephone(String numtel) {
+        Optional<Client> clientOpt = clientRepository.findByNumtel(numtel);
+        if (clientOpt.isEmpty()) return Map.of("status", "NOT_FOUND");
 
+        Client client = clientOpt.get();
+
+        // Client archivé → proposer désarchivage
+        if (Boolean.TRUE.equals(client.getArchived())) {
+            return Map.of(
+                    "status", "ARCHIVED",
+                    "clientId", client.getId(),
+                    "nom", client.getUser().getNom(),
+                    "prenom", client.getUser().getPrenom(),
+                    "email", client.getUser().getEmail()
+            );
+        }
+
+        // Numéro déjà utilisé par un client actif
+        return Map.of("status", "ALREADY_TAKEN");
+    }
+
+    // ─── CHECK EMAIL ──────────────────────────────────────────────────────────
+    // Statuts : NOT_FOUND | ROLE_CLIENT | EMAIL_OTHER_ROLE
+    public Map<String, Object> checkEmail(String email) {
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            return Map.of("status", "NOT_FOUND");
+        }
+
+        User user = userOpt.get();
+        boolean isClient = user.getRoles().stream()
+                .anyMatch(r -> r.getName() == ERole.ROLE_CLIENT);
+
+        if (isClient) {
+            Optional<Client> clientOpt = clientRepository.findByUser(user);
+            if (clientOpt.isPresent() && Boolean.TRUE.equals(clientOpt.get().getArchived())) {
+                // Client archivé → proposer désarchivage
+                Client client = clientOpt.get();
+                return Map.of(
+                        "status", "ROLE_CLIENT_ARCHIVED",
+                        "clientId", client.getId(),
+                        "nom", user.getNom(),
+                        "prenom", user.getPrenom(),
+                        "email", user.getEmail()
+                );
+            }
+            return Map.of("status", "ROLE_CLIENT",
+                    "message", "Un client possède déjà ce mail. Choisissez un autre mail.");
+        } else {
+            return Map.of("status", "EMAIL_OTHER_ROLE",
+                    "message", "Un utilisateur avec un autre rôle possède déjà ce mail. Choisissez un autre mail.");
+        }
+    }
+
+    // ─── ASSOCIER UN CLIENT EXISTANT À UNE ENTREPRISE ────────────────────────
+    public ResponseEntity<?> associerAEntreprise(Long clientId, Long entrepriseId) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
+        Entreprise entreprise = entrepriseRepository.findById(entrepriseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise non trouvée"));
+
+        boolean dejaAssocie = client.getEntreprises().stream()
+                .anyMatch(e -> e.getId().equals(entrepriseId));
+        if (dejaAssocie) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "ALREADY_ASSOCIATED",
+                    "message", "Ce client est déjà associé à cette entreprise."
+            ));
+        }
+
+        if (Boolean.TRUE.equals(client.getUser().getArchived())) {
+            client.getUser().setArchived(false);
+            client.setArchived(false);
+            userRepository.save(client.getUser());
+        }
+
+        client.addEntreprise(entreprise);
+        client.setCreatedBy(getCurrentUser().getEmail());
+        Client saved = clientRepository.save(client);
+
+        return ResponseEntity.ok(Map.of(
+                "status", "ASSOCIATED",
+                "message", "Client associé à " + entreprise.getNom() + " avec succès.",
+                "client", toResponse(saved)
+        ));
+    }
+
+    // ─── DÉSARCHIVER ET ASSOCIER ──────────────────────────────────────────────
+    public ResponseEntity<?> desarchiverEtAssocier(Long clientId, Long entrepriseId) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
+
+        client.getUser().setArchived(false);
+        client.setArchived(false);
+        userRepository.save(client.getUser());
+
+        if (entrepriseId != null) {
+            entrepriseRepository.findById(entrepriseId).ifPresent(client::addEntreprise);
+        }
+        client.setCreatedBy(getCurrentUser().getEmail());
+        return ResponseEntity.ok(toResponse(clientRepository.save(client)));
+    }
+
+    // ─── CRUD ─────────────────────────────────────────────────────────────────
     public List<ClientResponse> getAll() {
         User currentUser = getCurrentUser();
         if (isGerantOrSuperAdmin(currentUser)) {
-            return clientRepository.findAll().stream()
+            return clientRepository.findAllWithEntreprises().stream()
                     .map(this::toResponse).collect(Collectors.toList());
         } else {
             Employe employe = getEmployeFromUser(currentUser);
             return clientRepository.findByCreatedBy(employe.getUser().getEmail()).stream()
                     .map(this::toResponse).collect(Collectors.toList());
         }
-    }
-
-    public List<ClientResponse> getActifs() {
-        return clientRepository.findByArchivedFalse().stream()
-                .map(this::toResponse).collect(Collectors.toList());
-    }
-
-    public List<ClientResponse> getArchives() {
-        return clientRepository.findByArchivedTrue().stream()
-                .map(this::toResponse).collect(Collectors.toList());
     }
 
     public ClientResponse getById(Long id) {
@@ -114,37 +217,50 @@ public class ClientService {
     }
 
     public ResponseEntity<?> create(ClientRequest request) {
-        Optional<User> existing = userRepository.findByEmail(request.getEmail());
-        if (existing.isPresent()) {
-            Optional<Client> archivedClient = clientRepository.findByUserIdAndArchivedTrue(existing.get().getId());
-            if (archivedClient.isPresent()) {
+        User currentUser = getCurrentUser();
+        Entreprise entreprise = resolveEntreprise(currentUser, request.getEntrepriseId());
+
+        // Vérification email
+        Optional<User> existingByEmail = userRepository.findByEmail(request.getEmail());
+        if (existingByEmail.isPresent()) {
+            User existingUser = existingByEmail.get();
+            boolean isClient = existingUser.getRoles().stream()
+                    .anyMatch(r -> r.getName() == ERole.ROLE_CLIENT);
+            if (isClient) {
                 return ResponseEntity.badRequest().body(Map.of(
-                        "error", "ALREADY_ARCHIVED",
-                        "message", "Un client avec cet email existe déjà mais est archivé.",
-                        "clientId", archivedClient.get().getId()
+                        "error", "ROLE_CLIENT",
+                        "message", "Un client possède déjà ce mail."
                 ));
             }
             return ResponseEntity.badRequest().body(Map.of(
-                    "error", "EMAIL_EXISTS",
-                    "message", "Un client avec cet email existe déjà."
+                    "error", "EMAIL_OTHER_ROLE",
+                    "message", "Un utilisateur avec un autre rôle possède déjà ce mail."
             ));
         }
 
-        User currentUser = getCurrentUser();
+        // Vérification numéro de téléphone
+        if (request.getNumtel() != null && !request.getNumtel().isBlank()) {
+            Optional<Client> existingByTel = clientRepository.findByNumtel(request.getNumtel());
+            if (existingByTel.isPresent()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "TEL_ALREADY_TAKEN",
+                        "message", "Ce numéro de téléphone est déjà utilisé."
+                ));
+            }
+        }
+
+        // Création
         User userClient = new User();
         userClient.setNom(request.getNom());
         userClient.setPrenom(request.getPrenom());
         userClient.setEmail(request.getEmail());
         userClient.setPassword(passwordEncoder.encode(
                 request.getPassword() != null && !request.getPassword().isBlank()
-                        ? request.getPassword()
-                        : java.util.UUID.randomUUID().toString()
+                        ? request.getPassword() : UUID.randomUUID().toString()
         ));
         userClient.setArchived(false);
-
         Role clientRole = roleRepository.findByName(ERole.ROLE_CLIENT)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.INTERNAL_SERVER_ERROR, "Role CLIENT non trouvé"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role CLIENT non trouvé"));
         userClient.setRoles(Set.of(clientRole));
         userRepository.save(userClient);
 
@@ -153,19 +269,9 @@ public class ClientService {
         client.setNumtel(request.getNumtel());
         client.setArchived(false);
         client.setCreatedBy(currentUser.getEmail());
+        if (entreprise != null) client.addEntreprise(entreprise);
 
-        // Assigner l'entreprise du gérant ou de l'employé
-        if (isGerant(currentUser)) {
-            entrepriseRepository.findByGerantId(currentUser.getId())
-                    .ifPresent(client::setEntreprise);
-        } else if (!isSuperAdmin(currentUser)) {
-            employeRepository.findByUser(currentUser)
-                    .ifPresent(emp -> client.setEntreprise(emp.getEntreprise()));
-        }
-
-        clientRepository.save(client);
-
-        return ResponseEntity.ok(toResponse(client));
+        return ResponseEntity.ok(toResponse(clientRepository.save(client)));
     }
 
     public ClientResponse update(Long id, ClientRequest request) {
@@ -175,19 +281,49 @@ public class ClientService {
         client.setNumtel(request.getNumtel());
         client.getUser().setNom(request.getNom());
         client.getUser().setPrenom(request.getPrenom());
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            client.getUser().setPassword(passwordEncoder.encode(request.getPassword()));
+        }
         userRepository.save(client.getUser());
-        clientRepository.save(client);
-        return toResponse(client);
+        return toResponse(clientRepository.save(client));
     }
 
+    // ─── ARCHIVER / DÉSARCHIVER ───────────────────────────────────────────────
     public ClientResponse setArchived(Long id, boolean archived) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
+
         client.setArchived(archived);
         client.getUser().setArchived(archived);
         userRepository.save(client.getUser());
+
+        // À l'archivage : supprimer toutes les associations avec les entreprises
+        if (archived) {
+            new ArrayList<>(client.getEntreprises()).forEach(client::removeEntreprise);
+        }
+
+        return toResponse(clientRepository.save(client));
+    }
+
+    // ─── DISSOCIER D'UNE ENTREPRISE ───────────────────────────────────────────
+    public ResponseEntity<?> dissocierDeEntreprise(Long clientId, Long entrepriseId) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
+        Entreprise entreprise = entrepriseRepository.findById(entrepriseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise non trouvée"));
+
+        boolean associe = client.getEntreprises().stream()
+                .anyMatch(e -> e.getId().equals(entrepriseId));
+        if (!associe) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "NOT_ASSOCIATED",
+                    "message", "Ce client n'est pas associé à cette entreprise."
+            ));
+        }
+
+        client.removeEntreprise(entreprise);
         clientRepository.save(client);
-        return toResponse(client);
+        return ResponseEntity.ok(Map.of("message", "Client retiré de " + entreprise.getNom()));
     }
 
     public void delete(Long id) {

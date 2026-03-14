@@ -1,20 +1,14 @@
 package com.lounes.gestion_reservations.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-
 public class ClientRequest {
-    @NotBlank
     private String nom;
-    @NotBlank
     private String prenom;
-    @NotBlank
-    @Email
     private String email;
-
     private String password;
-    @NotBlank
     private String numtel;
+    private Long entrepriseId; // utilisé par le SUPER_ADMIN pour cibler une entreprise
+
+    // ── Getters & Setters ──
 
     public String getNom() { return nom; }
     public void setNom(String nom) { this.nom = nom; }
@@ -30,4 +24,7 @@ public class ClientRequest {
 
     public String getNumtel() { return numtel; }
     public void setNumtel(String numtel) { this.numtel = numtel; }
+
+    public Long getEntrepriseId() { return entrepriseId; }
+    public void setEntrepriseId(Long entrepriseId) { this.entrepriseId = entrepriseId; }
 }

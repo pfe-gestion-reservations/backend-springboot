@@ -63,7 +63,7 @@ public class AuthController {
         user.setPrenom(signupRequest.getPrenom());
         user.setEmail(signupRequest.getEmail());
         user.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
-        user.setArchived(false);   // ← remplace setActif(true)
+        user.setArchived(false);
 
         Role clientRole = roleRepository.findByName(ERole.ROLE_CLIENT)
                 .orElseThrow(() -> new RuntimeException("Role CLIENT non trouvé"));
@@ -93,7 +93,7 @@ public class AuthController {
         user.setPrenom(signupRequest.getPrenom());
         user.setEmail(signupRequest.getEmail());
         user.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
-        user.setArchived(false);   // ← remplace setActif(true)
+        user.setArchived(false);
 
         Role gerantRole = roleRepository.findByName(ERole.ROLE_GERANT)
                 .orElseThrow(() -> new RuntimeException("Role GERANT non trouvé"));

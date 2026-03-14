@@ -7,6 +7,13 @@ public class GerantResponse {
     private String email;
     private Boolean archived;
 
+    // Entreprise associée (null si libre)
+    private Long entrepriseId;
+    private String entrepriseNom;
+    private String entrepriseAdresse;
+    private String entrepriseTelephone;
+    private String entrepriseSecteur;
+
     public GerantResponse() {}
 
     public GerantResponse(Long id, String nom, String prenom, String email, Boolean archived) {
@@ -31,4 +38,19 @@ public class GerantResponse {
 
     public Boolean getArchived() { return archived; }
     public void setArchived(Boolean archived) { this.archived = archived; }
+
+    public Long getEntrepriseId() { return entrepriseId; }
+    public void setEntrepriseId(Long entrepriseId) { this.entrepriseId = entrepriseId; }
+
+    public String getEntrepriseNom() { return entrepriseNom; }
+    public void setEntrepriseNom(String entrepriseNom) { this.entrepriseNom = entrepriseNom; }
+
+    public String getEntrepriseAdresse() { return entrepriseAdresse; }
+    public void setEntrepriseAdresse(String entrepriseAdresse) { this.entrepriseAdresse = entrepriseAdresse; }
+
+    public String getEntrepriseTelephone() { return entrepriseTelephone; }
+    public void setEntrepriseTelephone(String entrepriseTelephone) { this.entrepriseTelephone = entrepriseTelephone; }
+
+    public String getEntrepriseSecteur() { return entrepriseSecteur; }
+    public void setEntrepriseSecteur(String entrepriseSecteur) { this.entrepriseSecteur = entrepriseSecteur; }
 }

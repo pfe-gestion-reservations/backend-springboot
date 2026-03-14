@@ -1,19 +1,16 @@
 package com.lounes.gestion_reservations.controller;
 
-import com.lounes.gestion_reservations.dto.*;
-import com.lounes.gestion_reservations.model.ERole;
-import com.lounes.gestion_reservations.model.User;
-import com.lounes.gestion_reservations.repo.EntrepriseRepository;
-import com.lounes.gestion_reservations.repo.UserRepository;
+import com.lounes.gestion_reservations.dto.EmployeRequest;
+import com.lounes.gestion_reservations.dto.EmployeResponse;
 import com.lounes.gestion_reservations.service.EmployeService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/employes")
@@ -21,58 +18,16 @@ import java.util.List;
 public class EmployeController {
 
     @Autowired private EmployeService employeService;
-    @Autowired private UserRepository userRepository;
-    @Autowired private EntrepriseRepository entrepriseRepository;
 
-    // ── Utilitaire : résoudre l'entreprise selon le rôle appelant ────────────
-    private Long resolveEntrepriseId(Long requestedId) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User currentUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-
-        boolean isSuperAdmin = currentUser.getRoles().stream()
-                .anyMatch(r -> r.getName() == ERole.ROLE_SUPER_ADMIN);
-
-        if (isSuperAdmin) {
-            if (requestedId == null)
-                throw new RuntimeException("entrepriseId obligatoire pour SUPER_ADMIN");
-            return requestedId;
-        }
-        // GERANT → déduit de son entreprise
-        return entrepriseRepository.findByGerantId(currentUser.getId())
-                .orElseThrow(() -> new RuntimeException("Aucune entreprise trouvée pour ce gérant"))
-                .getId();
-    }
-
-    // ── Vérifier un email avant création ─────────────────────────────────────
+    // ─── CHECK EMAIL ──────────────────────────────────────────────────────────
     @GetMapping("/check-email")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
-    public ResponseEntity<EmployeCheckResponse> checkEmail(
+    public ResponseEntity<Map<String, Object>> checkEmail(
             @RequestParam String email,
             @RequestParam(required = false) Long entrepriseId) {
-        Long eid = resolveEntrepriseId(entrepriseId);
-        return ResponseEntity.ok(employeService.checkEmail(email, eid));
+        return ResponseEntity.ok(employeService.checkEmail(email, entrepriseId));
     }
 
-    // ── Créer nouveau compte employé ─────────────────────────────────────────
-    @PostMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
-    public ResponseEntity<EmployeResponse> create(@Valid @RequestBody EmployeRequest request) {
-        Long eid = resolveEntrepriseId(request.getEntrepriseId());
-        if (request.getPassword() == null || request.getPassword().isBlank())
-            return ResponseEntity.badRequest().build();
-        return ResponseEntity.ok(employeService.create(request, eid));
-    }
-
-    // ── Rattacher un user existant libre ─────────────────────────────────────
-    @PostMapping("/rattacher")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
-    public ResponseEntity<EmployeResponse> rattacher(@RequestBody RattachementRequest req) {
-        Long eid = resolveEntrepriseId(req.getEntrepriseId());
-        return ResponseEntity.ok(employeService.rattacher(req.getUserId(), eid, req.getSpecialite()));
-    }
-
-    // ── Liste ─────────────────────────────────────────────────────────────────
     @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<List<EmployeResponse>> getAll() {
@@ -80,7 +35,7 @@ public class EmployeController {
     }
 
     @GetMapping("/entreprise/{entrepriseId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<EmployeResponse>> getByEntreprise(@PathVariable Long entrepriseId) {
         return ResponseEntity.ok(employeService.getByEntrepriseId(entrepriseId));
     }
@@ -91,24 +46,62 @@ public class EmployeController {
         return ResponseEntity.ok(employeService.getById(id));
     }
 
-    // ── Modifier ──────────────────────────────────────────────────────────────
+    // ─── RATTACHER un employé FREE à une entreprise ──────────────────────────
+    // Accepte : { "email": "...", "entrepriseId": 5, "specialite": "..." }
+    // entrepriseId est optionnel : si absent, déduit depuis le gérant connecté
+    @PostMapping("/rattacher")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
+    public ResponseEntity<?> rattacher(@RequestBody Map<String, Object> body) {
+        String email      = (String) body.get("email");
+        Long entrepriseId = body.get("entrepriseId") != null
+                ? Long.parseLong(body.get("entrepriseId").toString()) : null;
+        String specialite = (String) body.get("specialite");
+
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("message", "Le champ email est obligatoire"));
+        }
+        return ResponseEntity.ok(employeService.rattacherByEmail(email, entrepriseId, specialite));
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
+    public ResponseEntity<?> create(@Valid @RequestBody EmployeRequest request) {
+        return employeService.create(request);
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<EmployeResponse> update(@PathVariable Long id,
-                                                  @RequestBody EmployeRequest request) {
+                                                  @Valid @RequestBody EmployeRequest request) {
         return ResponseEntity.ok(employeService.update(id, request));
     }
 
-    // ── Archiver / désarchiver ────────────────────────────────────────────────
     @PatchMapping("/{id}/archiver")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
-    public ResponseEntity<EmployeResponse> archiver(@PathVariable Long id) {
-        return ResponseEntity.ok(employeService.archiver(id));
+    public ResponseEntity<?> archiver(@PathVariable Long id) {
+        employeService.archiver(id);
+        return ResponseEntity.ok("Employé archivé avec succès !");
     }
 
     @PatchMapping("/{id}/desarchiver")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
-    public ResponseEntity<EmployeResponse> desarchiver(@PathVariable Long id) {
-        return ResponseEntity.ok(employeService.desarchiver(id));
+    public ResponseEntity<?> desarchiver(@PathVariable Long id) {
+        employeService.desarchiver(id);
+        return ResponseEntity.ok("Employé désarchivé avec succès !");
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
+    public ResponseEntity<?> desactiver(@PathVariable Long id) {
+        employeService.desactiver(id);
+        return ResponseEntity.ok("Employé désactivé avec succès !");
+    }
+
+    @PutMapping("/{id}/reactiver")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
+    public ResponseEntity<?> reactiver(@PathVariable Long id) {
+        employeService.reactiver(id);
+        return ResponseEntity.ok("Employé réactivé avec succès !");
     }
 }
