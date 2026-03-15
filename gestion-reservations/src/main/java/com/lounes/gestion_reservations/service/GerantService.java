@@ -57,6 +57,7 @@ public class GerantService {
     public EmployeCheckResponse checkEmail(String email) {
         Optional<User> userOpt = userRepository.findByEmail(email);
 
+        // Aucun compte → nouveau
         if (userOpt.isEmpty())
             return new EmployeCheckResponse("NOUVEAU",
                     "Aucun compte trouvé. Vous pouvez créer un nouveau gérant.",
@@ -64,12 +65,15 @@ public class GerantService {
 
         User user = userOpt.get();
 
-        // Vérifier si ce user est déjà gérant d'une entreprise active
-        Optional<Entreprise> entrepriseOpt = entrepriseRepository.findByGerantId(user.getId());
-        if (entrepriseOpt.isPresent() && !Boolean.TRUE.equals(user.getArchived())) {
-            return new EmployeCheckResponse("OCCUPE",
-                    "Ce gérant est déjà assigné à l'entreprise : " + entrepriseOpt.get().getNom(),
-                    user.getId(), user.getNom(), user.getPrenom(), user.getEmail());
+        // Vérifier si ce user est GÉRANT
+        boolean isGerant = user.getRoles().stream()
+                .anyMatch(r -> r.getName() == ERole.ROLE_GERANT);
+
+        if (!isGerant) {
+            // Email utilisé par un autre rôle (client, employé, super admin...)
+            return new EmployeCheckResponse("EMAIL_OTHER_ROLE",
+                    "Cet email est déjà utilisé par un autre type de compte. Veuillez choisir un autre email.",
+                    null, null, null, email);
         }
 
         // Gérant archivé → proposer désarchivage
@@ -79,7 +83,15 @@ public class GerantService {
                     user.getId(), user.getNom(), user.getPrenom(), user.getEmail());
         }
 
-        // Gérant actif sans entreprise → compte gérant déjà existant, bloquer
+        // Gérant actif avec entreprise → occupé
+        Optional<Entreprise> entrepriseOpt = entrepriseRepository.findByGerantId(user.getId());
+        if (entrepriseOpt.isPresent()) {
+            return new EmployeCheckResponse("OCCUPE",
+                    "Ce gérant est déjà assigné à l'entreprise : " + entrepriseOpt.get().getNom(),
+                    user.getId(), user.getNom(), user.getPrenom(), user.getEmail());
+        }
+
+        // Gérant actif sans entreprise → compte existant, bloquer
         return new EmployeCheckResponse("OCCUPE",
                 "Ce mail a déjà un compte gérant actif dans le système.",
                 user.getId(), user.getNom(), user.getPrenom(), user.getEmail());

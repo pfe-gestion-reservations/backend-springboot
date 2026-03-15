@@ -184,10 +184,17 @@ public class ServiceService {
                     .orElse(new ConfigService());
             config.setService(service);
             config.setTypeService(TypeService.RESSOURCE_PARTAGEE);
+            config.setDureeMinutes(request.getDureeMinutes());
+            config.setCapaciteMinPersonnes(request.getCapaciteMinPersonnes());
+            config.setCapaciteMaxPersonnes(request.getCapaciteMaxPersonnes());
+            config.setAnnulationHeures(request.getAnnulationHeures());
+            config.setAvanceReservationJours(request.getAvanceReservationJours());
             config.setRessourceObligatoire(true);
             config.setEmployeObligatoire(false);
-            config.setReservationEnGroupe(false);
-            config.setFileAttenteActive(true); // ← toujours actif
+            config.setReservationEnGroupe(
+                    request.getCapaciteMaxPersonnes() != null && request.getCapaciteMaxPersonnes() > 1
+            );
+            config.setFileAttenteActive(true);
             configServiceRepository.save(config);
         }
 

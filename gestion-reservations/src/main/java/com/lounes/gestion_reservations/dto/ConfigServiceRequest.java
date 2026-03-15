@@ -16,109 +16,32 @@ public class ConfigServiceRequest {
     private Boolean fileAttenteActive;
     private Integer avanceReservationJours;
     private Integer annulationHeures;
+    private Boolean tarifParPersonne = false;  // false=fixe, true=par personne
 
-    public Long getServiceId() {
-        return serviceId;
-    }
+    public Long getServiceId()                          { return serviceId; }
+    public void setServiceId(Long serviceId)            { this.serviceId = serviceId; }
+    public TypeService getTypeService()                 { return typeService; }
+    public void setTypeService(TypeService t)           { this.typeService = t; }
+    public Integer getDureeMinutes()                    { return dureeMinutes; }
+    public void setDureeMinutes(Integer d)              { this.dureeMinutes = d; }
+    public Integer getCapaciteMinPersonnes()            { return capaciteMinPersonnes; }
+    public void setCapaciteMinPersonnes(Integer c)      { this.capaciteMinPersonnes = c; }
+    public Integer getCapaciteMaxPersonnes()            { return capaciteMaxPersonnes; }
+    public void setCapaciteMaxPersonnes(Integer c)      { this.capaciteMaxPersonnes = c; }
+    public Boolean getRessourceObligatoire()            { return ressourceObligatoire; }
+    public void setRessourceObligatoire(Boolean b)      { this.ressourceObligatoire = b; }
+    public Boolean getEmployeObligatoire()              { return employeObligatoire; }
+    public void setEmployeObligatoire(Boolean b)        { this.employeObligatoire = b; }
+    public Boolean getReservationEnGroupe()             { return reservationEnGroupe; }
+    public void setReservationEnGroupe(Boolean b)       { this.reservationEnGroupe = b; }
+    public Boolean getFileAttenteActive()               { return fileAttenteActive; }
+    public void setFileAttenteActive(Boolean b)         { this.fileAttenteActive = b; }
+    public Integer getAvanceReservationJours()          { return avanceReservationJours; }
+    public void setAvanceReservationJours(Integer a)    { this.avanceReservationJours = a; }
+    public Integer getAnnulationHeures()                { return annulationHeures; }
+    public void setAnnulationHeures(Integer a)          { this.annulationHeures = a; }
+    public Boolean getTarifParPersonne()                { return tarifParPersonne; }
+    public void setTarifParPersonne(Boolean t)          { this.tarifParPersonne = t; }
 
-    public void setServiceId(Long serviceId) {
-        this.serviceId = serviceId;
-    }
-
-    public TypeService getTypeService() {
-        return typeService;
-    }
-
-    public void setTypeService(TypeService typeService) {
-        this.typeService = typeService;
-    }
-
-    public Integer getDureeMinutes() {
-        return dureeMinutes;
-    }
-
-    public void setDureeMinutes(Integer dureeMinutes) {
-        this.dureeMinutes = dureeMinutes;
-    }
-
-    public Integer getCapaciteMinPersonnes() {
-        return capaciteMinPersonnes;
-    }
-
-    public void setCapaciteMinPersonnes(Integer capaciteMinPersonnes) {
-        this.capaciteMinPersonnes = capaciteMinPersonnes;
-    }
-
-    public Integer getCapaciteMaxPersonnes() {
-        return capaciteMaxPersonnes;
-    }
-
-    public void setCapaciteMaxPersonnes(Integer capaciteMaxPersonnes) {
-        this.capaciteMaxPersonnes = capaciteMaxPersonnes;
-    }
-
-    public Boolean getRessourceObligatoire() {
-        return ressourceObligatoire;
-    }
-
-    public void setRessourceObligatoire(Boolean ressourceObligatoire) {
-        this.ressourceObligatoire = ressourceObligatoire;
-    }
-
-    public Boolean getEmployeObligatoire() {
-        return employeObligatoire;
-    }
-
-    public void setEmployeObligatoire(Boolean employeObligatoire) {
-        this.employeObligatoire = employeObligatoire;
-    }
-
-    public Boolean getReservationEnGroupe() {
-        return reservationEnGroupe;
-    }
-
-    public void setReservationEnGroupe(Boolean reservationEnGroupe) {
-        this.reservationEnGroupe = reservationEnGroupe;
-    }
-
-    public Boolean getFileAttenteActive() {
-        return fileAttenteActive;
-    }
-
-    public void setFileAttenteActive(Boolean fileAttenteActive) {
-        this.fileAttenteActive = fileAttenteActive;
-    }
-
-    public Integer getAvanceReservationJours() {
-        return avanceReservationJours;
-    }
-
-    public void setAvanceReservationJours(Integer avanceReservationJours) {
-        this.avanceReservationJours = avanceReservationJours;
-    }
-
-    public Integer getAnnulationHeures() {
-        return annulationHeures;
-    }
-
-    public void setAnnulationHeures(Integer annulationHeures) {
-        this.annulationHeures = annulationHeures;
-    }
-
-    public ConfigServiceRequest() {
-    }
-
-    public ConfigServiceRequest(Long serviceId, TypeService typeService, Integer dureeMinutes, Integer capaciteMinPersonnes, Integer capaciteMaxPersonnes, Boolean ressourceObligatoire, Boolean employeObligatoire, Boolean reservationEnGroupe, Boolean fileAttenteActive, Integer avanceReservationJours, Integer annulationHeures) {
-        this.serviceId = serviceId;
-        this.typeService = typeService;
-        this.dureeMinutes = dureeMinutes;
-        this.capaciteMinPersonnes = capaciteMinPersonnes;
-        this.capaciteMaxPersonnes = capaciteMaxPersonnes;
-        this.ressourceObligatoire = ressourceObligatoire;
-        this.employeObligatoire = employeObligatoire;
-        this.reservationEnGroupe = reservationEnGroupe;
-        this.fileAttenteActive = fileAttenteActive;
-        this.avanceReservationJours = avanceReservationJours;
-        this.annulationHeures = annulationHeures;
-    }
+    public ConfigServiceRequest() {}
 }

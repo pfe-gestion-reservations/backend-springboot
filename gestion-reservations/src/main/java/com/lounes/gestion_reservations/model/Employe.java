@@ -12,29 +12,29 @@ public class Employe {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)   // EAGER : user toujours chargé
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     private String specialite;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "entreprise_id", nullable = true)
+    @ManyToOne(fetch = FetchType.EAGER)  // EAGER : entreprise toujours chargée
+    @JoinColumn(name = "entreprise_id", nullable = true)  // nullable=true : employé peut être libre
     private Entreprise entreprise;
 
     @Column(nullable = false)
     private Boolean archived = false;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-    public String getSpecialite() { return specialite; }
-    public void setSpecialite(String specialite) { this.specialite = specialite; }
-    public Entreprise getEntreprise() { return entreprise; }
-    public void setEntreprise(Entreprise entreprise) { this.entreprise = entreprise; }
-    public Boolean getArchived() { return archived; }
-    public void setArchived(Boolean archived) { this.archived = archived; }
+    public Long getId()                        { return id; }
+    public void setId(Long id)                 { this.id = id; }
+    public User getUser()                      { return user; }
+    public void setUser(User user)             { this.user = user; }
+    public String getSpecialite()              { return specialite; }
+    public void setSpecialite(String s)        { this.specialite = s; }
+    public Entreprise getEntreprise()          { return entreprise; }
+    public void setEntreprise(Entreprise e)    { this.entreprise = e; }
+    public Boolean getArchived()               { return archived; }
+    public void setArchived(Boolean archived)  { this.archived = archived; }
 
     public Employe() {}
 
@@ -45,6 +45,4 @@ public class Employe {
         this.entreprise = entreprise;
         this.archived = archived;
     }
-
-
 }

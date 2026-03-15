@@ -10,7 +10,7 @@ public class JwtResponse {
     private String nom;
     private String prenom;
     private List<String> roles;
-    private Long entrepriseId; // null si gérant sans entreprise
+    private Long entrepriseId;  // null si pas GERANT
 
     public JwtResponse(String token, Long id, String email, String nom, String prenom,
                        List<String> roles, Long entrepriseId) {
@@ -23,12 +23,12 @@ public class JwtResponse {
         this.entrepriseId = entrepriseId;
     }
 
-    public String getToken()      { return token; }
-    public String getType()       { return type; }
-    public Long getId()           { return id; }
-    public String getEmail()      { return email; }
-    public String getNom()        { return nom; }
-    public String getPrenom()     { return prenom; }
-    public List<String> getRoles(){ return roles; }
-    public Long getEntrepriseId() { return entrepriseId; }
+    public String getToken()       { return token; }
+    public String getType()        { return type; }
+    public Long getId()            { return id; }
+    public String getEmail()       { return email; }
+    public String getNom()         { return nom; }
+    public String getPrenom()      { return prenom; }
+    public List<String> getRoles() { return roles; }
+    public Long getEntrepriseId()  { return entrepriseId; }
 }

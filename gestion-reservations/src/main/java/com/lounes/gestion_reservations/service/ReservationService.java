@@ -5,11 +5,13 @@ import com.lounes.gestion_reservations.dto.ReservationResponse;
 import com.lounes.gestion_reservations.model.*;
 import com.lounes.gestion_reservations.repo.*;
 import com.lounes.gestion_reservations.security.UserDetailsImpl;
-
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,22 +19,79 @@ import java.util.stream.Collectors;
 @Service
 public class ReservationService {
 
-    @Autowired private ReservationRepository reservationRepo;
-    @Autowired private ClientRepository clientRepo;
-    @Autowired private EmployeRepository employeRepo;
-    @Autowired private ServiceRepository serviceRepo;
-    @Autowired private EntrepriseRepository entrepriseRepo;
-    @Autowired private DisponibiliteRepository disponibiliteRepo;
+    @Autowired private ReservationRepository    reservationRepo;
+    @Autowired private ClientRepository         clientRepo;
+    @Autowired private EmployeRepository        employeRepo;
+    @Autowired private ServiceRepository        serviceRepo;
+    @Autowired private EntrepriseRepository     entrepriseRepo;
+    @Autowired private DisponibiliteRepository  disponibiliteRepo;
+    @Autowired private RessourceRepository      ressourceRepo;
 
-    // ── helper ──────────────────────────────────────────────
-    private Entreprise getCurrentEntreprise() {
-        UserDetailsImpl ud = (UserDetailsImpl) SecurityContextHolder
+    // ── helpers ──────────────────────────────────────────────────────────────
+    private UserDetailsImpl getCurrentUserDetails() {
+        return (UserDetailsImpl) SecurityContextHolder
                 .getContext().getAuthentication().getPrincipal();
-        return entrepriseRepo.findByGerantId(ud.getId())
-                .orElseGet(() -> entrepriseRepo.findByEmployeUserId(ud.getId())
-                        .orElseThrow(() -> new RuntimeException("Entreprise introuvable")));
     }
 
+    private Entreprise getCurrentEntreprise() {
+        UserDetailsImpl ud = getCurrentUserDetails();
+        return entrepriseRepo.findByGerantId(ud.getId())
+                .orElseGet(() -> entrepriseRepo.findByEmployeUserId(ud.getId())
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND, "Entreprise introuvable")));
+    }
+
+    // ── CALCUL DU PRIX ───────────────────────────────────────────────────────
+    // false (défaut) = tarif fixe peu importe le nombre de personnes
+    // true           = tarif × nombre de personnes
+    private Double calculerPrix(ServiceEntity service, ConfigService config, int nombrePersonnes) {
+        if (service.getTarif() == null) return null;
+        boolean parPersonne = config != null
+                && Boolean.TRUE.equals(config.getTarifParPersonne());
+        return parPersonne
+                ? service.getTarif() * nombrePersonnes
+                : service.getTarif();
+    }
+
+    // ── VALIDATION DISPONIBILITÉ ─────────────────────────────────────────────
+    private void validerDisponibilite(Long serviceId, LocalDateTime heureDebut) {
+        JourSemaine jour = JourSemaine.valueOf(
+                heureDebut.getDayOfWeek().name()
+                        .replace("MONDAY","LUNDI").replace("TUESDAY","MARDI")
+                        .replace("WEDNESDAY","MERCREDI").replace("THURSDAY","JEUDI")
+                        .replace("FRIDAY","VENDREDI").replace("SATURDAY","SAMEDI")
+                        .replace("SUNDAY","DIMANCHE")
+        );
+        LocalTime heure = heureDebut.toLocalTime();
+        List<Disponibilite> dispos = disponibiliteRepo
+                .findByServiceIdAndJourAndHeureDebutLessThanEqualAndHeureFinGreaterThan(
+                        serviceId, jour, heure, heure);
+        if (dispos.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Ce service n'est pas disponible le " + jour.name() +
+                            " à " + heure + ". Veuillez choisir un créneau disponible.");
+        }
+    }
+
+    // ── TROUVER RESSOURCE LIBRE ───────────────────────────────────────────────
+    private Ressource trouverRessourceLibre(Long serviceId, LocalDateTime heureDebut,
+                                            LocalDateTime heureFin, Long excludeReservationId) {
+        List<Ressource> ressources = ressourceRepo.findByServiceIdAndArchivedFalse(serviceId);
+        if (ressources.isEmpty())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Aucune ressource disponible pour ce service.");
+
+        for (Ressource ressource : ressources) {
+            boolean occupee = reservationRepo.isRessourceOccupee(
+                    ressource.getId(), heureDebut, heureFin, excludeReservationId);
+            if (!occupee) return ressource;
+        }
+
+        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Toutes les ressources sont occupées sur ce créneau.");
+    }
+
+    // ── toResponse ───────────────────────────────────────────────────────────
     private ReservationResponse toResponse(Reservation r) {
         ReservationResponse res = new ReservationResponse();
         res.setId(r.getId());
@@ -42,48 +101,22 @@ public class ReservationService {
         res.setEmployeId(r.getEmploye() != null ? r.getEmploye().getId() : null);
         res.setEmployeNom(r.getEmploye() != null ? r.getEmploye().getUser().getNom() : null);
         res.setEmployePrenom(r.getEmploye() != null ? r.getEmploye().getUser().getPrenom() : null);
+        res.setRessourceId(r.getRessource() != null ? r.getRessource().getId() : null);
+        res.setRessourceNom(r.getRessource() != null ? r.getRessource().getNom() : null);
         res.setServiceId(r.getService().getId());
         res.setServiceNom(r.getService().getNom());
-        res.setHeureDebut(r.getHeureDebut());   // ← remplace dateHeure
-        res.setHeureFin(r.getHeureFin());       // ← nouveau
-        res.setNombrePersonnes(r.getNombrePersonnes()); // ← nouveau
+        res.setHeureDebut(r.getHeureDebut());
+        res.setHeureFin(r.getHeureFin());
+        res.setNombrePersonnes(r.getNombrePersonnes());
+        res.setPrixTotal(r.getPrixTotal());
         res.setStatut(r.getStatut().name());
         res.setNotes(r.getNotes());
         return res;
     }
 
-    // ── VALIDATION DISPONIBILITÉ ─────────────────────────────
-    private void validerDisponibilite(Long serviceId, java.time.LocalDateTime heureDebut) {
-        JourSemaine jour = JourSemaine.valueOf(
-                heureDebut.getDayOfWeek().name()
-                        .replace("MONDAY","LUNDI").replace("TUESDAY","MARDI")
-                        .replace("WEDNESDAY","MERCREDI").replace("THURSDAY","JEUDI")
-                        .replace("FRIDAY","VENDREDI").replace("SATURDAY","SAMEDI")
-                        .replace("SUNDAY","DIMANCHE")
-        );
-
-        LocalTime heure = heureDebut.toLocalTime();
-
-        List<Disponibilite> dispos = disponibiliteRepo
-                .findByServiceIdAndJourAndHeureDebutLessThanEqualAndHeureFinGreaterThan(
-                        serviceId, jour, heure, heure
-                );
-
-        if (dispos.isEmpty()) {
-            throw new RuntimeException(
-                    "Ce service n'est pas disponible le " + jour.name() +
-                            " à " + heure + ". Veuillez choisir un créneau disponible."
-            );
-        }
-    }
-
-    // ── CRUD ────────────────────────────────────────────────
-    // ✅ Filtrage selon le rôle :
-    //    SUPER_ADMIN -> toutes | GERANT/EMPLOYE -> leur entreprise | CLIENT -> ses réservations
+    // ── GET ALL ──────────────────────────────────────────────────────────────
     public List<ReservationResponse> getAll() {
-        UserDetailsImpl ud = (UserDetailsImpl) SecurityContextHolder
-                .getContext().getAuthentication().getPrincipal();
-
+        UserDetailsImpl ud = getCurrentUserDetails();
         boolean isSuperAdmin = ud.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
         boolean isGerant = ud.getAuthorities().stream()
@@ -91,75 +124,126 @@ public class ReservationService {
         boolean isEmploye = ud.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_EMPLOYE"));
 
-        if (isSuperAdmin) {
+        if (isSuperAdmin)
             return reservationRepo.findAll().stream()
                     .map(this::toResponse).collect(Collectors.toList());
-        }
 
         if (isGerant) {
             Entreprise ent = entrepriseRepo.findByGerantId(ud.getId())
-                    .orElseThrow(() -> new RuntimeException("Entreprise du gerant introuvable"));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Entreprise du gérant introuvable"));
             return reservationRepo.findByEntrepriseId(ent.getId())
                     .stream().map(this::toResponse).collect(Collectors.toList());
         }
 
         if (isEmploye) {
             Entreprise ent = entrepriseRepo.findByEmployeUserId(ud.getId())
-                    .orElseThrow(() -> new RuntimeException("Entreprise de l'employe introuvable"));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Entreprise de l'employé introuvable"));
             return reservationRepo.findByEntrepriseId(ent.getId())
                     .stream().map(this::toResponse).collect(Collectors.toList());
         }
 
-        // CLIENT - uniquement ses propres reservations
         Client client = clientRepo.findByUserId(ud.getId())
-                .orElseThrow(() -> new RuntimeException("Client introuvable"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Client introuvable"));
         return reservationRepo.findByClientId(client.getId())
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    // ── CREATE ───────────────────────────────────────────────────────────────
     public ReservationResponse create(CreateReservationRequest req) {
         validerDisponibilite(req.getServiceId(), req.getHeureDebut());
 
-        boolean conflit = reservationRepo.existsByServiceIdAndHeureDebutAndStatutNot(
-                req.getServiceId(), req.getHeureDebut(), StatutReservation.ANNULEE
-        );
-        if (conflit) throw new RuntimeException("Ce créneau est déjà réservé pour ce service.");
+        ServiceEntity service = serviceRepo.findById(req.getServiceId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Service introuvable"));
+
+        ConfigService config = service.getConfig();
+        int duree = config != null && config.getDureeMinutes() != null
+                ? config.getDureeMinutes() : service.getDureeMinutes();
+        LocalDateTime heureFin = req.getHeureDebut().plusMinutes(duree);
 
         Client client = clientRepo.findById(req.getClientId())
-                .orElseThrow(() -> new RuntimeException("Client introuvable"));
-        ServiceEntity service = serviceRepo.findById(req.getServiceId())
-                .orElseThrow(() -> new RuntimeException("Service introuvable"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Client introuvable"));
         Entreprise ent = getCurrentEntreprise();
-
-        Employe employe = null;
-        if (req.getEmployeId() != null) {
-            employe = employeRepo.findById(req.getEmployeId())
-                    .orElseThrow(() -> new RuntimeException("Employé introuvable"));
-        }
-
-        // Calcul heureFin depuis ConfigService
-        int duree = service.getConfig() != null && service.getConfig().getDureeMinutes() != null
-                ? service.getConfig().getDureeMinutes()
-                : service.getDureeMinutes();
 
         Reservation r = new Reservation();
         r.setClient(client);
-        r.setEmploye(employe);
         r.setService(service);
         r.setEntreprise(ent);
         r.setHeureDebut(req.getHeureDebut());
-        r.setHeureFin(req.getHeureDebut().plusMinutes(duree));
+        r.setHeureFin(heureFin);
         r.setNombrePersonnes(req.getNombrePersonnes() != null ? req.getNombrePersonnes() : 1);
         r.setNotes(req.getNotes());
         r.setStatut(StatutReservation.EN_ATTENTE);
 
-        reservationRepo.save(r);
-        return toResponse(r);
+        String typeService = config != null ? config.getTypeService().name() : "";
+
+        switch (typeService) {
+            case "RESSOURCE_PARTAGEE" -> {
+                Ressource ressource = trouverRessourceLibre(
+                        service.getId(), req.getHeureDebut(), heureFin, null);
+                r.setRessource(ressource);
+                r.setPrixTotal(calculerPrix(service, config, r.getNombrePersonnes()));
+            }
+            case "EMPLOYE_DEDIE" -> {
+                if (req.getEmployeId() != null) {
+                    Employe employe = employeRepo.findById(req.getEmployeId())
+                            .orElseThrow(() -> new ResponseStatusException(
+                                    HttpStatus.NOT_FOUND, "Employé introuvable"));
+                    boolean conflitEmploye = reservationRepo.findByEmployeId(employe.getId())
+                            .stream()
+                            .filter(rv -> rv.getStatut() != StatutReservation.ANNULEE)
+                            .anyMatch(rv -> rv.getHeureDebut().isBefore(heureFin)
+                                    && rv.getHeureFin().isAfter(req.getHeureDebut()));
+                    if (conflitEmploye)
+                        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                "Cet employé est déjà réservé sur ce créneau.");
+                    r.setEmploye(employe);
+                }
+                r.setPrixTotal(calculerPrix(service, config, r.getNombrePersonnes()));
+            }
+            case "HYBRIDE" -> {
+                if (req.getEmployeId() != null) {
+                    Employe employe = employeRepo.findById(req.getEmployeId())
+                            .orElseThrow(() -> new ResponseStatusException(
+                                    HttpStatus.NOT_FOUND, "Employé introuvable"));
+                    r.setEmploye(employe);
+                }
+                Ressource ressource = trouverRessourceLibre(
+                        service.getId(), req.getHeureDebut(), heureFin, null);
+                r.setRessource(ressource);
+                r.setPrixTotal(calculerPrix(service, config, r.getNombrePersonnes()));
+            }
+            case "FILE_ATTENTE_PURE" -> {
+                r.setPrixTotal(calculerPrix(service, config, r.getNombrePersonnes()));
+            }
+            default -> {
+                boolean conflit = reservationRepo.existsByServiceIdAndHeureDebutAndStatutNot(
+                        req.getServiceId(), req.getHeureDebut(), StatutReservation.ANNULEE);
+                if (conflit)
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Ce créneau est déjà réservé pour ce service.");
+                if (req.getEmployeId() != null) {
+                    Employe employe = employeRepo.findById(req.getEmployeId())
+                            .orElseThrow(() -> new ResponseStatusException(
+                                    HttpStatus.NOT_FOUND, "Employé introuvable"));
+                    r.setEmploye(employe);
+                }
+                r.setPrixTotal(calculerPrix(service, config, r.getNombrePersonnes()));
+            }
+        }
+
+        return toResponse(reservationRepo.save(r));
     }
 
+    // ── UPDATE ───────────────────────────────────────────────────────────────
     public ReservationResponse update(Long id, CreateReservationRequest req) {
         Reservation r = reservationRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Réservation introuvable"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Réservation introuvable"));
 
         if (!r.getHeureDebut().equals(req.getHeureDebut()) ||
                 !r.getService().getId().equals(req.getServiceId())) {
@@ -167,33 +251,45 @@ public class ReservationService {
         }
 
         ServiceEntity service = serviceRepo.findById(req.getServiceId())
-                .orElseThrow(() -> new RuntimeException("Service introuvable"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Service introuvable"));
 
-        int duree = service.getConfig() != null && service.getConfig().getDureeMinutes() != null
-                ? service.getConfig().getDureeMinutes()
-                : service.getDureeMinutes();
+        ConfigService config = service.getConfig();
+        int duree = config != null && config.getDureeMinutes() != null
+                ? config.getDureeMinutes() : service.getDureeMinutes();
+        LocalDateTime heureFin = req.getHeureDebut().plusMinutes(duree);
+        String typeService = config != null ? config.getTypeService().name() : "";
 
         r.setService(service);
         r.setHeureDebut(req.getHeureDebut());
-        r.setHeureFin(req.getHeureDebut().plusMinutes(duree));
+        r.setHeureFin(heureFin);
         r.setNotes(req.getNotes());
 
-        if (req.getEmployeId() != null) {
+        if ("RESSOURCE_PARTAGEE".equals(typeService) || "HYBRIDE".equals(typeService)) {
+            Ressource ressource = trouverRessourceLibre(
+                    service.getId(), req.getHeureDebut(), heureFin, id);
+            r.setRessource(ressource);
+        }
+
+        if (req.getEmployeId() != null &&
+                ("EMPLOYE_DEDIE".equals(typeService) || "HYBRIDE".equals(typeService))) {
             Employe employe = employeRepo.findById(req.getEmployeId())
-                    .orElseThrow(() -> new RuntimeException("Employé introuvable"));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Employé introuvable"));
             r.setEmploye(employe);
         }
 
-        reservationRepo.save(r);
-        return toResponse(r);
+        r.setPrixTotal(calculerPrix(service, config, r.getNombrePersonnes()));
+        return toResponse(reservationRepo.save(r));
     }
 
+    // ── UPDATE STATUT ────────────────────────────────────────────────────────
     public ReservationResponse updateStatut(Long id, String statut) {
         Reservation r = reservationRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Réservation introuvable"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Réservation introuvable"));
         r.setStatut(StatutReservation.valueOf(statut));
-        reservationRepo.save(r);
-        return toResponse(r);
+        return toResponse(reservationRepo.save(r));
     }
 
     public void delete(Long id) {

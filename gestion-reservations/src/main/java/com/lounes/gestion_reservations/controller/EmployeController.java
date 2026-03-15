@@ -2,12 +2,15 @@ package com.lounes.gestion_reservations.controller;
 
 import com.lounes.gestion_reservations.dto.EmployeRequest;
 import com.lounes.gestion_reservations.dto.EmployeResponse;
+import com.lounes.gestion_reservations.model.Employe;
 import com.lounes.gestion_reservations.service.EmployeService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -35,7 +38,7 @@ public class EmployeController {
     }
 
     @GetMapping("/entreprise/{entrepriseId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<List<EmployeResponse>> getByEntreprise(@PathVariable Long entrepriseId) {
         return ResponseEntity.ok(employeService.getByEntrepriseId(entrepriseId));
     }
@@ -91,6 +94,14 @@ public class EmployeController {
         return ResponseEntity.ok("Employé désarchivé avec succès !");
     }
 
+    // Désarchiver ET rattacher à l'entreprise du gérant connecté
+    @PatchMapping("/{id}/desarchiver-rattacher")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
+    public ResponseEntity<?> desarchiverEtRattacher(@PathVariable Long id) {
+        employeService.desarchiverEtRattacher(id);
+        return ResponseEntity.ok("Employé désarchivé et rattaché avec succès !");
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<?> desactiver(@PathVariable Long id) {
@@ -104,4 +115,6 @@ public class EmployeController {
         employeService.reactiver(id);
         return ResponseEntity.ok("Employé réactivé avec succès !");
     }
+
+
 }
