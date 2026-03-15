@@ -23,8 +23,6 @@ public class ServiceEntity {
 
     private Double tarif; // nullable = gratuit
 
-    @Column(nullable = false)
-    private Boolean archived = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entreprise_id", nullable = false)
@@ -78,13 +76,6 @@ public class ServiceEntity {
         this.tarif = tarif;
     }
 
-    public Boolean getArchived() {
-        return archived;
-    }
-
-    public void setArchived(Boolean archived) {
-        this.archived = archived;
-    }
 
     public Entreprise getEntreprise() {
         return entreprise;
@@ -102,13 +93,12 @@ public class ServiceEntity {
         this.config = config;
     }
 
-    public ServiceEntity(Long id, String nom, String description, Integer dureeMinutes, Double tarif, Boolean archived, Entreprise entreprise, ConfigService config) {
+    public ServiceEntity(Long id, String nom, String description, Integer dureeMinutes, Double tarif, Entreprise entreprise, ConfigService config) {
         this.id = id;
         this.nom = nom;
         this.description = description;
         this.dureeMinutes = dureeMinutes;
         this.tarif = tarif;
-        this.archived = archived;
         this.entreprise = entreprise;
         this.config = config;
     }

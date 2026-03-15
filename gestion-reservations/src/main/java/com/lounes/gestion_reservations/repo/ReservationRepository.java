@@ -37,4 +37,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                                @Param("heureDebut") LocalDateTime heureDebut,
                                @Param("heureFin") LocalDateTime heureFin,
                                @Param("excludeId") Long excludeId);
+
+    void deleteByServiceId(Long serviceId);
+    List<Reservation> findByServiceId(Long serviceId);
 }

@@ -2,8 +2,9 @@ package com.lounes.gestion_reservations.model;
 
 public enum StatutFileAttente {
     EN_ATTENTE,
-    APPELE,
+    APPELE,      // Ressource proposée — client doit accepter ou refuser
     EN_COURS,
     TERMINE,
-    ANNULE
+    ANNULE,
+    EXPIRE       // Client n'a pas répondu dans le délai
 }

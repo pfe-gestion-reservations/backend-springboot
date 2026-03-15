@@ -35,15 +35,11 @@ public class RessourceService {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
     }
 
-    // Pour les opérations GÉRANT — résout son entreprise
     private Entreprise getEntrepriseForGerant(Long userId) {
         return entrepriseRepository.findByGerantId(userId)
                 .orElseThrow(() -> new RuntimeException("Entreprise introuvable pour ce gérant"));
     }
 
-    // ── CREATE ───────────────────────────────────────────────
-    // SUPER_ADMIN → entreprise déduite du service cible
-    // GÉRANT      → vérifie que le service appartient à son entreprise
     public RessourceResponse create(RessourceRequest request) {
         ServiceEntity service = serviceRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service non trouvé"));
@@ -59,31 +55,26 @@ public class RessourceService {
                         "Ce service n'appartient pas à votre entreprise");
         }
 
-        Ressource r = new Ressource();
-        r.setNom(request.getNom());
-        r.setDescription(request.getDescription());
-        r.setCapacite(request.getCapacite() != null ? request.getCapacite() : 1);
-        r.setService(service);
-        r.setEntreprise(entreprise);
-        r.setArchived(false);
-
-        // ── Vérifier doublon : même nom de ressource dans le même service ──
         if (ressourceRepository.existsByNomIgnoreCaseAndServiceId(request.getNom(), service.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Une ressource avec ce nom existe déjà pour ce service");
         }
 
+        Ressource r = new Ressource();
+        r.setNom(request.getNom());
+        r.setDescription(request.getDescription());
+        r.setService(service);
+        r.setEntreprise(entreprise);
+        r.setArchived(false);
+
         return toResponse(ressourceRepository.save(r));
     }
 
-    // ── GET BY SERVICE ───────────────────────────────────────
     public List<RessourceResponse> getByService(Long serviceId) {
         return ressourceRepository.findByServiceIdAndArchivedFalse(serviceId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    // ── GET ALL ─────────────────────────────────────────────
-    // SUPER_ADMIN → toutes les ressources | GÉRANT → son entreprise
     public List<RessourceResponse> getAll() {
         UserDetailsImpl ud = getCurrentUserDetails();
         if (isSuperAdmin(ud)) {
@@ -95,14 +86,12 @@ public class RessourceService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    // ── UPDATE ───────────────────────────────────────────────
     public RessourceResponse update(Long id, RessourceRequest request) {
         Ressource r = ressourceRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ressource non trouvée"));
 
         r.setNom(request.getNom());
         r.setDescription(request.getDescription());
-        if (request.getCapacite() != null) r.setCapacite(request.getCapacite());
 
         if (request.getServiceId() != null &&
                 !request.getServiceId().equals(r.getService().getId())) {
@@ -114,7 +103,6 @@ public class RessourceService {
         return toResponse(ressourceRepository.save(r));
     }
 
-    // ── ARCHIVER / DÉSARCHIVER ───────────────────────────────
     public RessourceResponse archiver(Long id) {
         Ressource r = ressourceRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ressource non trouvée"));
@@ -129,13 +117,11 @@ public class RessourceService {
         return toResponse(ressourceRepository.save(r));
     }
 
-    // ── toResponse ───────────────────────────────────────────
     private RessourceResponse toResponse(Ressource r) {
         return new RessourceResponse(
                 r.getId(),
                 r.getNom(),
                 r.getDescription(),
-                r.getCapacite(),
                 r.getArchived(),
                 r.getService().getId(),
                 r.getService().getNom(),

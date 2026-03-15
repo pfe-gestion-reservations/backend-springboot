@@ -12,7 +12,6 @@ public class ServiceResponse {
     private String description;
     private Integer dureeMinutes;
     private Double tarif;
-    private Boolean archived;
     private Long entrepriseId;
 
     public ServiceResponse() {
@@ -58,13 +57,6 @@ public class ServiceResponse {
         this.tarif = tarif;
     }
 
-    public Boolean getArchived() {
-        return archived;
-    }
-
-    public void setArchived(Boolean archived) {
-        this.archived = archived;
-    }
 
     public Long getEntrepriseId() {
         return entrepriseId;
@@ -74,13 +66,12 @@ public class ServiceResponse {
         this.entrepriseId = entrepriseId;
     }
 
-    public ServiceResponse(Long id, String nom, String description, Integer dureeMinutes, Double tarif, Boolean archived, Long entrepriseId) {
+    public ServiceResponse(Long id, String nom, String description, Integer dureeMinutes, Double tarif, Long entrepriseId) {
         this.id = id;
         this.nom = nom;
         this.description = description;
         this.dureeMinutes = dureeMinutes;
         this.tarif = tarif;
-        this.archived = archived;
         this.entrepriseId = entrepriseId;
     }
 }

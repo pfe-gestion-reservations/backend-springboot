@@ -55,19 +55,7 @@ public class ServiceController {
         return ResponseEntity.ok(serviceService.update(id, request));
     }
 
-    // ✅ PATCH /api/services/{id}/archiver
-    @PatchMapping("/{id}/archiver")
-    @PreAuthorize("hasRole('GERANT') or hasRole('SUPER_ADMIN')")
-    public ResponseEntity<ServiceResponse> archiver(@PathVariable Long id) {
-        return ResponseEntity.ok(serviceService.setArchived(id, true));
-    }
 
-    // ✅ PATCH /api/services/{id}/desarchiver
-    @PatchMapping("/{id}/desarchiver")
-    @PreAuthorize("hasRole('GERANT') or hasRole('SUPER_ADMIN')")
-    public ResponseEntity<ServiceResponse> desarchiver(@PathVariable Long id) {
-        return ResponseEntity.ok(serviceService.setArchived(id, false));
-    }
 
     // ✅ DELETE /api/services/{id} — GERANT ou SUPER_ADMIN seulement
     @DeleteMapping("/{id}")

@@ -1,11 +1,9 @@
 package com.lounes.gestion_reservations.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
 
 @Entity
 @Table(name = "ressources")
-@Data
 public class Ressource {
 
     @Id
@@ -13,12 +11,9 @@ public class Ressource {
     private Long id;
 
     @Column(nullable = false)
-    private String nom; // "Terrain 1", "Box A", "Chaise 3"
+    private String nom;
 
     private String description;
-
-    @Column(nullable = false)
-    private Integer capacite = 1; // nb personnes max sur cette ressource
 
     @Column(nullable = false)
     private Boolean archived = false;
@@ -31,72 +26,24 @@ public class Ressource {
     @JoinColumn(name = "entreprise_id", nullable = false)
     private Entreprise entreprise;
 
-    public Ressource() {
-    }
+    public Ressource() {}
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId()                      { return id; }
+    public void setId(Long id)               { this.id = id; }
+    public String getNom()                   { return nom; }
+    public void setNom(String nom)           { this.nom = nom; }
+    public String getDescription()           { return description; }
+    public void setDescription(String d)     { this.description = d; }
+    public Boolean getArchived()             { return archived; }
+    public void setArchived(Boolean a)       { this.archived = a; }
+    public ServiceEntity getService()        { return service; }
+    public void setService(ServiceEntity s)  { this.service = s; }
+    public Entreprise getEntreprise()        { return entreprise; }
+    public void setEntreprise(Entreprise e)  { this.entreprise = e; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getNom() {
-        return nom;
-    }
-
-    public void setNom(String nom) {
-        this.nom = nom;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Integer getCapacite() {
-        return capacite;
-    }
-
-    public void setCapacite(Integer capacite) {
-        this.capacite = capacite;
-    }
-
-    public Boolean getArchived() {
-        return archived;
-    }
-
-    public void setArchived(Boolean archived) {
-        this.archived = archived;
-    }
-
-    public ServiceEntity getService() {
-        return service;
-    }
-
-    public void setService(ServiceEntity service) {
-        this.service = service;
-    }
-
-    public Entreprise getEntreprise() {
-        return entreprise;
-    }
-
-    public void setEntreprise(Entreprise entreprise) {
-        this.entreprise = entreprise;
-    }
-
-    public Ressource(Long id, String nom, String description, Integer capacite, Boolean archived, ServiceEntity service, Entreprise entreprise) {
-        this.id = id;
-        this.nom = nom;
-        this.description = description;
-        this.capacite = capacite;
-        this.archived = archived;
-        this.service = service;
-        this.entreprise = entreprise;
+    public Ressource(Long id, String nom, String description, Boolean archived,
+                     ServiceEntity service, Entreprise entreprise) {
+        this.id = id; this.nom = nom; this.description = description;
+        this.archived = archived; this.service = service; this.entreprise = entreprise;
     }
 }
