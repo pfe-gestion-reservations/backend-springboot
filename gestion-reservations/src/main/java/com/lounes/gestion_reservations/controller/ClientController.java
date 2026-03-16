@@ -2,10 +2,12 @@ package com.lounes.gestion_reservations.controller;
 
 import com.lounes.gestion_reservations.dto.ClientRequest;
 import com.lounes.gestion_reservations.dto.ClientResponse;
+import com.lounes.gestion_reservations.security.UserDetailsImpl;
 import com.lounes.gestion_reservations.service.ClientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +20,14 @@ public class ClientController {
 
     @Autowired
     private ClientService clientService;
+
+    // ─── MON PROFIL CLIENT ────────────────────────────────────────────────────
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<ClientResponse> getMyProfile(
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(clientService.getByUserId(userDetails.getId()));
+    }
 
     // ─── LOOKUP PAR TÉLÉPHONE ─────────────────────────────────────────────────
     @GetMapping("/by-telephone/{numtel}")

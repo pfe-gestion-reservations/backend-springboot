@@ -333,6 +333,34 @@ public class ReservationService {
         return toResponse(reservationRepo.save(r));
     }
 
+    // ── ANNULER PAR CLIENT ────────────────────────────────────────────────────
+    public ReservationResponse annulerParClient(Long id) {
+        Reservation r = reservationRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Réservation introuvable"));
+        UserDetailsImpl ud = getCurrentUserDetails();
+        // Vérifier que c'est bien la réservation du client connecté
+        boolean isClient = ud.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CLIENT"));
+        if (isClient) {
+            Client client = clientRepo.findByUserId(ud.getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Client introuvable"));
+            if (!r.getClient().getId().equals(client.getId()))
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cette réservation ne vous appartient pas.");
+        }
+        if (r.getStatut() == StatutReservation.ANNULEE)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette réservation est déjà annulée.");
+        if (r.getStatut() == StatutReservation.TERMINEE)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible d'annuler une réservation terminée.");
+        r.setStatut(StatutReservation.ANNULEE);
+        reservationRepo.save(r);
+        // Libérer ressource si applicable
+        if (r.getRessource() != null) {
+            ConfigService config = r.getService().getConfig();
+            if (config != null && config.getTypeService() == TypeService.RESSOURCE_PARTAGEE)
+                notifierPremierEnFile(r.getService().getId(), r.getHeureDebut());
+        }
+        return toResponse(r);
+    }
+
     // ── UPDATE STATUT ────────────────────────────────────────────────────────
     public ReservationResponse updateStatut(Long id, String statut) {
         Reservation r = reservationRepo.findById(id)

@@ -16,10 +16,6 @@ public class Avis {
     private Client client;
 
     @ManyToOne
-    @JoinColumn(name = "employe_id", nullable = false)
-    private Employe employe;
-
-    @ManyToOne
     @JoinColumn(name = "service_id", nullable = false)
     private ServiceEntity service;
 
@@ -27,7 +23,7 @@ public class Avis {
     @JoinColumn(name = "reservation_id", nullable = false, unique = true)
     private Reservation reservation;
 
-    private Integer note; // 1 à 5
+    private Integer note;
     private String commentaire;
     private LocalDateTime dateAvis;
 
@@ -35,8 +31,6 @@ public class Avis {
     public void setId(Long id) { this.id = id; }
     public Client getClient() { return client; }
     public void setClient(Client client) { this.client = client; }
-    public Employe getEmploye() { return employe; }
-    public void setEmploye(Employe employe) { this.employe = employe; }
     public ServiceEntity getService() { return service; }
     public void setService(ServiceEntity service) { this.service = service; }
     public Reservation getReservation() { return reservation; }

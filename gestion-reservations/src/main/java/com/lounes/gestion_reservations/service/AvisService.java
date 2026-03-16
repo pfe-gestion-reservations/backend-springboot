@@ -19,7 +19,6 @@ public class AvisService {
     @Autowired private AvisRepository avisRepository;
     @Autowired private ReservationRepository reservationRepository;
     @Autowired private ClientRepository clientRepository;
-    @Autowired private EmployeRepository employeRepository;
     @Autowired private ServiceRepository serviceRepository;
     @Autowired private EntrepriseRepository entrepriseRepository;
 
@@ -42,7 +41,6 @@ public class AvisService {
 
         Avis avis = new Avis();
         avis.setClient(client);
-        avis.setEmploye(reservation.getEmploye());
         avis.setService(reservation.getService());
         avis.setReservation(reservation);
         avis.setNote(request.getNote());
@@ -103,18 +101,16 @@ public class AvisService {
     }
 
     private AvisResponse toResponse(Avis a) {
-        String employeNom = a.getEmploye() != null ? a.getEmploye().getUser().getNom() : null;
-        String employePrenom = a.getEmploye() != null ? a.getEmploye().getUser().getPrenom() : null;
+        Long reservationId = a.getReservation() != null ? a.getReservation().getId() : null;
         return new AvisResponse(
                 a.getId(),
                 a.getClient().getUser().getNom(),
                 a.getClient().getUser().getPrenom(),
-                employeNom,
-                employePrenom,
                 a.getService().getNom(),
                 a.getNote(),
                 a.getCommentaire(),
-                a.getDateAvis()
+                a.getDateAvis(),
+                reservationId
         );
     }
 }

@@ -241,6 +241,12 @@ public class ClientService {
         return toResponse(client);
     }
 
+    public ClientResponse getByUserId(Long userId) {
+        Client client = clientRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
+        return toResponse(client);
+    }
+
     public ResponseEntity<?> create(ClientRequest request) {
         User currentUser = getCurrentUser();
         Entreprise entreprise = resolveEntreprise(currentUser, request.getEntrepriseId());

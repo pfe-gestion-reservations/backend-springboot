@@ -52,6 +52,12 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.updateStatut(id, statut));
     }
 
+    @PatchMapping("/{id}/annuler")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE','CLIENT')")
+    public ResponseEntity<ReservationResponse> annulerParClient(@PathVariable Long id) {
+        return ResponseEntity.ok(reservationService.annulerParClient(id));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
