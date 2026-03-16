@@ -40,4 +40,25 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     void deleteByServiceId(Long serviceId);
     List<Reservation> findByServiceId(Long serviceId);
-}
+
+    // Vérifie chevauchement pour un client sur un service donné
+    @Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.client.id = :clientId " +
+            "AND r.service.id = :serviceId " +
+            "AND r.statut <> com.lounes.gestion_reservations.model.StatutReservation.ANNULEE " +
+            "AND r.heureDebut < :heureFin AND r.heureFin > :heureDebut " +
+            "AND (:excludeId IS NULL OR r.id <> :excludeId)")
+    boolean hasClientOverlap(@Param("clientId") Long clientId,
+                             @Param("serviceId") Long serviceId,
+                             @Param("heureDebut") LocalDateTime heureDebut,
+                             @Param("heureFin") LocalDateTime heureFin,
+                             @Param("excludeId") Long excludeId);
+
+    // Vérifie chevauchement global pour un service (tous clients confondus)
+    @Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.service.id = :serviceId " +
+            "AND r.statut <> com.lounes.gestion_reservations.model.StatutReservation.ANNULEE " +
+            "AND r.heureDebut < :heureFin AND r.heureFin > :heureDebut " +
+            "AND (:excludeId IS NULL OR r.id <> :excludeId)")
+    boolean hasServiceOverlap(@Param("serviceId") Long serviceId,
+                              @Param("heureDebut") LocalDateTime heureDebut,
+                              @Param("heureFin") LocalDateTime heureFin,
+                              @Param("excludeId") Long excludeId);}

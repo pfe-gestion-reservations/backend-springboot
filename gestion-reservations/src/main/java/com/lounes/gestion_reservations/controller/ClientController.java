@@ -37,7 +37,7 @@ public class ClientController {
 
     // ─── ASSOCIER UN CLIENT EXISTANT À UNE ENTREPRISE ────────────────────────
     @PostMapping("/{clientId}/entreprise/{entrepriseId}/associer")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'GERANT')")
     public ResponseEntity<?> associerAEntreprise(
             @PathVariable Long clientId,
             @PathVariable Long entrepriseId) {

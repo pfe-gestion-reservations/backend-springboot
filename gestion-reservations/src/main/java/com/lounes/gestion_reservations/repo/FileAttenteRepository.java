@@ -25,6 +25,12 @@ public interface FileAttenteRepository extends JpaRepository<FileAttente, Long> 
             @Param("serviceId") Long serviceId,
             @Param("heureDebut") LocalDateTime heureDebut);
 
+    List<FileAttente> findByClientId(Long clientId);
+
+    List<FileAttente> findByEntrepriseIdAndStatutNot(Long entrepriseId, StatutFileAttente statut);
+
+    boolean existsByReservationIdAndStatutNot(Long reservationId, StatutFileAttente statut);
+
     // ── Suppression en cascade lors du delete d'un service ──
     void deleteByServiceId(Long serviceId);
 

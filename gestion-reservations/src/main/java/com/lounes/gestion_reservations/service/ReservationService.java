@@ -179,6 +179,13 @@ public class ReservationService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Client introuvable"));
 
+        // Vérifier chevauchement pour ce client sur ce service
+        boolean overlap = reservationRepo.hasClientOverlap(
+                client.getId(), service.getId(), req.getHeureDebut(), heureFin, null);
+        if (overlap)
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ce client a déjà une réservation qui chevauche ce créneau pour ce service.");
+
         // SUPER_ADMIN → entreprise déduite du service choisi
         Entreprise ent = getCurrentEntreprise();
         if (ent == null) ent = service.getEntreprise();
@@ -197,6 +204,7 @@ public class ReservationService {
 
         switch (typeService) {
             case "RESSOURCE_PARTAGEE" -> {
+                // La ressource gère elle-même le chevauchement via trouverRessourceOptimale
                 Ressource ressource = trouverRessourceOptimale(
                         service.getId(), req.getHeureDebut(), heureFin, null);
                 r.setRessource(ressource);
@@ -216,6 +224,11 @@ public class ReservationService {
                         throw new ResponseStatusException(HttpStatus.CONFLICT,
                                 "Cet employé est déjà réservé sur ce créneau.");
                     r.setEmploye(employe);
+                } else {
+                    // Pas d'employé spécifié → vérifier chevauchement global du service
+                    if (reservationRepo.hasServiceOverlap(service.getId(), req.getHeureDebut(), heureFin, null))
+                        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                "Ce créneau est déjà occupé pour ce service.");
                 }
                 r.setPrixTotal(calculerPrix(service, config, r.getNombrePersonnes()));
             }
@@ -224,6 +237,14 @@ public class ReservationService {
                     Employe employe = employeRepo.findById(req.getEmployeId())
                             .orElseThrow(() -> new ResponseStatusException(
                                     HttpStatus.NOT_FOUND, "Employé introuvable"));
+                    boolean conflitEmploye = reservationRepo.findByEmployeId(employe.getId())
+                            .stream()
+                            .filter(rv -> rv.getStatut() != StatutReservation.ANNULEE)
+                            .anyMatch(rv -> rv.getHeureDebut().isBefore(heureFin)
+                                    && rv.getHeureFin().isAfter(req.getHeureDebut()));
+                    if (conflitEmploye)
+                        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                "Cet employé est déjà réservé sur ce créneau.");
                     r.setEmploye(employe);
                 }
                 Ressource ressource = trouverRessourceLibre(
@@ -232,12 +253,14 @@ public class ReservationService {
                 r.setPrixTotal(calculerPrix(service, config, r.getNombrePersonnes()));
             }
             case "FILE_ATTENTE_PURE" -> {
+                // File d'attente : vérifier chevauchement global du service
+                if (reservationRepo.hasServiceOverlap(service.getId(), req.getHeureDebut(), heureFin, null))
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Ce créneau est déjà occupé pour ce service.");
                 r.setPrixTotal(calculerPrix(service, config, r.getNombrePersonnes()));
             }
             default -> {
-                boolean conflit = reservationRepo.existsByServiceIdAndHeureDebutAndStatutNot(
-                        req.getServiceId(), req.getHeureDebut(), StatutReservation.ANNULEE);
-                if (conflit)
+                if (reservationRepo.hasServiceOverlap(service.getId(), req.getHeureDebut(), heureFin, null))
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
                             "Ce créneau est déjà réservé pour ce service.");
                 if (req.getEmployeId() != null) {
@@ -273,6 +296,21 @@ public class ReservationService {
                 ? config.getDureeMinutes() : service.getDureeMinutes();
         LocalDateTime heureFin = req.getHeureDebut().plusMinutes(duree);
         String typeService = config != null ? config.getTypeService().name() : "";
+
+        // Vérifier chevauchement pour ce client (en excluant la réservation courante)
+        boolean overlap = reservationRepo.hasClientOverlap(
+                r.getClient().getId(), service.getId(), req.getHeureDebut(), heureFin, id);
+        if (overlap)
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ce client a déjà une réservation qui chevauche ce créneau pour ce service.");
+
+        // Vérifier chevauchement global du service pour les types sans ressource/employé
+        if ("FILE_ATTENTE_PURE".equals(typeService) ||
+                ("EMPLOYE_DEDIE".equals(typeService) && req.getEmployeId() == null)) {
+            if (reservationRepo.hasServiceOverlap(service.getId(), req.getHeureDebut(), heureFin, id))
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Ce créneau est déjà occupé pour ce service.");
+        }
 
         r.setService(service);
         r.setHeureDebut(req.getHeureDebut());
@@ -326,6 +364,8 @@ public class ReservationService {
                 notifierPremierEnFile(r.getService().getId(), r.getHeureDebut());
             }
         }
+        // Supprimer d'abord les entrées de file d'attente liées
+        fileAttenteRepo.deleteByReservationId(id);
         reservationRepo.deleteById(id);
     }
 }

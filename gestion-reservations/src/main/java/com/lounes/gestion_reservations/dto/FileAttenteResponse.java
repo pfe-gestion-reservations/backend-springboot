@@ -17,6 +17,7 @@ public class FileAttenteResponse {
     private String entrepriseNom;
     private Long entrepriseId;
     private Long reservationId;
+    private String ressourceNom;
     private LocalDateTime heureDebut;
     private LocalDateTime heureArrivee;
     private LocalDateTime dateHeureRdv;
@@ -29,6 +30,7 @@ public class FileAttenteResponse {
                                String serviceNom, Long serviceId,
                                String entrepriseNom, Long entrepriseId,
                                Long reservationId,
+                               String ressourceNom,
                                LocalDateTime heureDebut, LocalDateTime heureArrivee,
                                LocalDateTime dateHeureRdv, StatutFileAttente statut) {
         this.id = id;
@@ -37,6 +39,7 @@ public class FileAttenteResponse {
         this.serviceNom = serviceNom; this.serviceId = serviceId;
         this.entrepriseNom = entrepriseNom; this.entrepriseId = entrepriseId;
         this.reservationId = reservationId;
+        this.ressourceNom = ressourceNom;
         this.heureDebut = heureDebut; this.heureArrivee = heureArrivee;
         this.dateHeureRdv = dateHeureRdv; this.statut = statut;
     }
@@ -53,6 +56,7 @@ public class FileAttenteResponse {
     public String getEntrepriseNom()       { return entrepriseNom; }
     public Long getEntrepriseId()          { return entrepriseId; }
     public Long getReservationId()         { return reservationId; }
+    public String getRessourceNom()        { return ressourceNom; }
     public LocalDateTime getHeureDebut()   { return heureDebut; }
     public LocalDateTime getHeureArrivee() { return heureArrivee; }
     public LocalDateTime getDateHeureRdv() { return dateHeureRdv; }

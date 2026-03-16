@@ -6,6 +6,7 @@ import com.lounes.gestion_reservations.model.*;
 import com.lounes.gestion_reservations.repo.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import com.lounes.gestion_reservations.security.UserDetailsImpl;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -56,11 +57,25 @@ public class FileAttenteService {
         fa.setHeureArrivee(LocalDateTime.now());
         fa.setStatut(StatutFileAttente.EN_ATTENTE);
 
-        // ── RESSOURCE_PARTAGEE : file globale par service + créneau ──
+        // ── Tous les types : réservation obligatoire ──
+        // Pour RESSOURCE_PARTAGEE, heureDebut vient de la réservation ou de la requête
         if (config.getTypeService() == TypeService.RESSOURCE_PARTAGEE) {
-            if (request.getHeureDebut() == null)
-                throw new RuntimeException("heureDebut obligatoire pour RESSOURCE_PARTAGEE");
-            fa.setHeureDebut(request.getHeureDebut());
+            // heureDebut peut venir de la requête ou de la réservation
+            if (request.getReservationId() != null) {
+                Reservation reservation = reservationRepository.findById(request.getReservationId())
+                        .orElseThrow(() -> new RuntimeException("Réservation non trouvée"));
+                if (!reservation.getClient().getId().equals(client.getId()))
+                    throw new RuntimeException("Cette réservation n'appartient pas à ce client !");
+                // Vérifier que la réservation n'est pas déjà en file active
+                if (fileAttenteRepository.existsByReservationIdAndStatutNot(reservation.getId(), StatutFileAttente.ANNULE))
+                    throw new RuntimeException("Cette réservation est déjà inscrite en file d'attente.");
+                fa.setReservation(reservation);
+                fa.setHeureDebut(reservation.getHeureDebut());
+            } else if (request.getHeureDebut() != null) {
+                fa.setHeureDebut(request.getHeureDebut());
+            } else {
+                throw new RuntimeException("reservationId ou heureDebut obligatoire pour RESSOURCE_PARTAGEE");
+            }
             fa.setEntreprise(service.getEntreprise());
         }
         // ── Tous les autres types : réservation obligatoire, employeId optionnel ──
@@ -71,6 +86,9 @@ public class FileAttenteService {
                     .orElseThrow(() -> new RuntimeException("Réservation non trouvée"));
             if (!reservation.getClient().getId().equals(client.getId()))
                 throw new RuntimeException("Cette réservation n'appartient pas à ce client !");
+            // Vérifier que la réservation n'est pas déjà en file active
+            if (fileAttenteRepository.existsByReservationIdAndStatutNot(reservation.getId(), StatutFileAttente.ANNULE))
+                throw new RuntimeException("Cette réservation est déjà inscrite en file d'attente.");
 
             fa.setReservation(reservation);
             fa.setEntreprise(service.getEntreprise());
@@ -122,7 +140,16 @@ public class FileAttenteService {
     }
 
     // ── GET ALL ───────────────────────────────────────────────────────────────
-    public List<FileAttenteResponse> getAll() {
+    public List<FileAttenteResponse> getAll(UserDetailsImpl userDetails) {
+        boolean isGerant = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_GERANT"));
+        if (isGerant) {
+            Entreprise entreprise = entrepriseRepository.findByGerantId(userDetails.getId())
+                    .orElse(null);
+            if (entreprise == null) return List.of();
+            return fileAttenteRepository.findByEntrepriseIdAndStatutNot(entreprise.getId(), StatutFileAttente.ANNULE)
+                    .stream().sorted(TRI_FILE).map(this::toResponse).collect(Collectors.toList());
+        }
         return fileAttenteRepository.findByStatutNot(StatutFileAttente.ANNULE)
                 .stream().sorted(TRI_FILE).map(this::toResponse).collect(Collectors.toList());
     }
@@ -234,6 +261,8 @@ public class FileAttenteService {
                 fa.getEntreprise() != null ? fa.getEntreprise().getNom() : null,
                 fa.getEntreprise() != null ? fa.getEntreprise().getId() : null,
                 fa.getReservation() != null ? fa.getReservation().getId() : null,
+                fa.getReservation() != null && fa.getReservation().getRessource() != null
+                        ? fa.getReservation().getRessource().getNom() : null,
                 fa.getHeureDebut(),
                 fa.getHeureArrivee(),
                 fa.getReservation() != null ? fa.getReservation().getHeureDebut() : null,

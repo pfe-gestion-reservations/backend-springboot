@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,6 +25,8 @@ public class ClientService {
     @Autowired private UserRepository userRepository;
     @Autowired private RoleRepository roleRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private ReservationRepository reservationRepository;
+    @Autowired private FileAttenteRepository fileAttenteRepository;
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -91,26 +94,34 @@ public class ClientService {
     }
 
     // ─── CHECK TÉLÉPHONE ──────────────────────────────────────────────────────
-    // Statuts : NOT_FOUND | ALREADY_TAKEN
+    // Statuts : NOT_FOUND | ALREADY_TAKEN | ARCHIVED
     public Map<String, Object> findByTelephone(String numtel) {
         Optional<Client> clientOpt = clientRepository.findByNumtel(numtel);
         if (clientOpt.isEmpty()) return Map.of("status", "NOT_FOUND");
 
         Client client = clientOpt.get();
 
-        // Client archivé → proposer désarchivage
+        // Client archivé
         if (Boolean.TRUE.equals(client.getArchived())) {
             return Map.of(
                     "status", "ARCHIVED",
                     "clientId", client.getId(),
                     "nom", client.getUser().getNom(),
                     "prenom", client.getUser().getPrenom(),
-                    "email", client.getUser().getEmail()
+                    "email", client.getUser().getEmail(),
+                    "numtel", numtel
             );
         }
 
-        // Numéro déjà utilisé par un client actif
-        return Map.of("status", "ALREADY_TAKEN");
+        // Numéro utilisé par un client actif → retourner ses détails pour proposer l'association
+        return Map.of(
+                "status", "ALREADY_TAKEN",
+                "clientId", client.getId(),
+                "nom", client.getUser().getNom(),
+                "prenom", client.getUser().getPrenom(),
+                "email", client.getUser().getEmail(),
+                "numtel", numtel
+        );
     }
 
     // ─── CHECK EMAIL ──────────────────────────────────────────────────────────
@@ -129,7 +140,7 @@ public class ClientService {
         if (isClient) {
             Optional<Client> clientOpt = clientRepository.findByUser(user);
             if (clientOpt.isPresent() && Boolean.TRUE.equals(clientOpt.get().getArchived())) {
-                // Client archivé → proposer désarchivage
+                // Client archivé → informer seulement
                 Client client = clientOpt.get();
                 return Map.of(
                         "status", "ROLE_CLIENT_ARCHIVED",
@@ -139,8 +150,15 @@ public class ClientService {
                         "email", user.getEmail()
                 );
             }
-            return Map.of("status", "ROLE_CLIENT",
-                    "message", "Un client possède déjà ce mail. Choisissez un autre mail.");
+            // Client actif → retourner son id pour permettre l'association directe
+            Client client = clientOpt.orElseThrow();
+            return Map.of(
+                    "status", "ROLE_CLIENT",
+                    "clientId", client.getId(),
+                    "nom", user.getNom(),
+                    "prenom", user.getPrenom(),
+                    "email", user.getEmail()
+            );
         } else {
             return Map.of("status", "EMAIL_OTHER_ROLE",
                     "message", "Un utilisateur avec un autre rôle possède déjà ce mail. Choisissez un autre mail.");
@@ -199,12 +217,19 @@ public class ClientService {
     // ─── CRUD ─────────────────────────────────────────────────────────────────
     public List<ClientResponse> getAll() {
         User currentUser = getCurrentUser();
-        if (isGerantOrSuperAdmin(currentUser)) {
+        if (isSuperAdmin(currentUser)) {
             return clientRepository.findAllWithEntreprises().stream()
                     .map(this::toResponse).collect(Collectors.toList());
+        } else if (isGerant(currentUser)) {
+            Entreprise entreprise = entrepriseRepository.findByGerantId(currentUser.getId()).orElse(null);
+            if (entreprise == null) return List.of();
+            return clientRepository.findByEntrepriseId(entreprise.getId()).stream()
+                    .map(this::toResponse).collect(Collectors.toList());
         } else {
-            Employe employe = getEmployeFromUser(currentUser);
-            return clientRepository.findByCreatedBy(employe.getUser().getEmail()).stream()
+            // EMPLOYE → tous les clients de son entreprise
+            Entreprise entreprise = entrepriseRepository.findByEmployeUserId(currentUser.getId()).orElse(null);
+            if (entreprise == null) return List.of();
+            return clientRepository.findByEntrepriseId(entreprise.getId()).stream()
                     .map(this::toResponse).collect(Collectors.toList());
         }
     }
@@ -306,6 +331,7 @@ public class ClientService {
     }
 
     // ─── DISSOCIER D'UNE ENTREPRISE ───────────────────────────────────────────
+    @Transactional
     public ResponseEntity<?> dissocierDeEntreprise(Long clientId, Long entrepriseId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
@@ -320,6 +346,18 @@ public class ClientService {
                     "message", "Ce client n'est pas associé à cette entreprise."
             ));
         }
+
+        // Annuler les réservations actives du client pour cette entreprise
+        reservationRepository.findByClientId(clientId).stream()
+                .filter(r -> r.getEntreprise() != null && r.getEntreprise().getId().equals(entrepriseId))
+                .filter(r -> r.getStatut() == StatutReservation.EN_ATTENTE || r.getStatut() == StatutReservation.CONFIRMEE)
+                .forEach(r -> { r.setStatut(StatutReservation.ANNULEE); reservationRepository.save(r); });
+
+        // Annuler les entrées en file d'attente actives du client pour cette entreprise
+        fileAttenteRepository.findByClientId(clientId).stream()
+                .filter(f -> f.getEntreprise() != null && f.getEntreprise().getId().equals(entrepriseId))
+                .filter(f -> f.getStatut() == StatutFileAttente.EN_ATTENTE || f.getStatut() == StatutFileAttente.APPELE)
+                .forEach(f -> { f.setStatut(StatutFileAttente.ANNULE); fileAttenteRepository.save(f); });
 
         client.removeEntreprise(entreprise);
         clientRepository.save(client);

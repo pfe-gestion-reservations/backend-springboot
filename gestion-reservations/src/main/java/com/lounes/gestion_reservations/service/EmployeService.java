@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
@@ -84,6 +85,7 @@ public class EmployeService {
     }
 
     // ─── RATTACHER un employé existant (LIBRE) à une entreprise ──────────────
+    @Transactional
     public Map<String, Object> rattacher(Long userId, Long entrepriseId, String specialite) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur non trouvé"));
@@ -105,6 +107,7 @@ public class EmployeService {
 
 
     // ─── RATTACHER PAR EMAIL (appelé depuis POST /rattacher) ──────────────────
+    @Transactional
     public Map<String, Object> rattacherByEmail(String email, Long entrepriseId, String specialite) {
         Employe emp = employeRepository.findByUserEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -231,6 +234,7 @@ public class EmployeService {
         return toResponse(employe);
     }
 
+    @Transactional
     public EmployeResponse update(Long id, EmployeRequest request) {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé"));
@@ -269,6 +273,7 @@ public class EmployeService {
         userRepository.save(employe.getUser());
     }
 
+    @Transactional
     public void archiver(Long id) {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé"));
@@ -278,6 +283,7 @@ public class EmployeService {
         employeRepository.save(employe);
     }
 
+    @Transactional
     public void desarchiver(Long id) {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé"));
@@ -286,13 +292,21 @@ public class EmployeService {
         employeRepository.save(employe);
     }
 
-    // ─── DÉSARCHIVER (l'entreprise est déjà conservée) ──────────────────────
+    // ─── DÉSARCHIVER + RATTACHER à l'entreprise du gérant connecté ──────────
+    @Transactional
     public void desarchiverEtRattacher(Long id) {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé"));
         employe.getUser().setArchived(false);
-        // entreprise reste null → libre
         userRepository.save(employe.getUser());
+        // Gérant → rattache à son entreprise | Super admin → désarchive seulement
+        User currentUser = getCurrentUser();
+        boolean isSuperAdmin = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == ERole.ROLE_SUPER_ADMIN);
+        if (!isSuperAdmin) {
+            Entreprise entreprise = getEntrepriseOfGerant(currentUser);
+            employe.setEntreprise(entreprise);
+        }
         employeRepository.save(employe);
     }
 

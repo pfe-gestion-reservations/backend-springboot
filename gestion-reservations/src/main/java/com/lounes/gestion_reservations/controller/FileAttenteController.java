@@ -31,8 +31,9 @@ public class FileAttenteController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE')")
-    public ResponseEntity<List<FileAttenteResponse>> getAll() {
-        return ResponseEntity.ok(fileAttenteService.getAll());
+    public ResponseEntity<List<FileAttenteResponse>> getAll(
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(fileAttenteService.getAll(userDetails));
     }
 
     // File d'attente par service + créneau (RESSOURCE_PARTAGEE)
