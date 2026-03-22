@@ -23,6 +23,8 @@ public class EmployeService {
     @Autowired private UserRepository userRepository;
     @Autowired private RoleRepository roleRepository;
     @Autowired private EntrepriseRepository entrepriseRepository;
+    @Autowired private ReservationRepository reservationRepository;
+    @Autowired private FileAttenteRepository fileAttenteRepository;
     @Autowired private PasswordEncoder passwordEncoder;
 
     private User getCurrentUser() {
@@ -308,6 +310,44 @@ public class EmployeService {
             employe.setEntreprise(entreprise);
         }
         employeRepository.save(employe);
+    }
+
+    // ─── SUPPRESSION DÉFINITIVE ──────────────────────────────────────────────
+    @Transactional
+    public void supprimerDefinitivement(Long id) {
+        Employe employe = employeRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé"));
+
+        List<String> relations = new ArrayList<>();
+
+        // 1. Rattaché à une entreprise ?
+        if (employe.getEntreprise() != null) {
+            relations.add("entreprise \"" + employe.getEntreprise().getNom() + "\"");
+        }
+
+        // 2. Réservations liées ?
+        long nbReservations = reservationRepository.findByEmployeId(id).size();
+        if (nbReservations > 0) {
+            relations.add(nbReservations + " réservation(s)");
+        }
+
+        // 3. File d'attente liée ?
+        long nbFileAttente = fileAttenteRepository.findByEmployeAndStatutNot(
+                employe, com.lounes.gestion_reservations.model.StatutFileAttente.TERMINE).size();
+        if (nbFileAttente > 0) {
+            relations.add(nbFileAttente + " entrée(s) en file d'attente");
+        }
+
+        if (!relations.isEmpty()) {
+            String detail = String.join(", ", relations);
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cet employé est lié à : " + detail + ". Supprimez ces relations avant de supprimer l'employé.");
+        }
+
+        // Aucune relation → suppression complète
+        Long userId = employe.getUser().getId();
+        employeRepository.delete(employe);
+        userRepository.deleteById(userId);
     }
 
     private EmployeResponse toResponse(Employe employe) {

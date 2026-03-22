@@ -217,21 +217,41 @@ public class ServiceService {
         ServiceEntity service = serviceRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service non trouvé"));
 
-        // Vérifier si le service est lié à des réservations ou une file d'attente
+        // Récupérer le type de service
+        boolean isRessourcePartagee = configServiceRepository.findByServiceId(id)
+                .map(c -> c.getTypeService() == TypeService.RESSOURCE_PARTAGEE)
+                .orElse(false);
+
+        // Vérifier les liaisons bloquantes (réservations + file d'attente)
         boolean hasReservations = !reservationRepository.findByServiceId(id).isEmpty();
         boolean hasFileAttente  = !fileAttenteRepository.findByStatutNot(StatutFileAttente.ANNULE)
                 .stream().filter(fa -> fa.getService().getId().equals(id)).toList().isEmpty();
 
         if (hasReservations || hasFileAttente) {
+            List<String> details = new java.util.ArrayList<>();
+            if (hasReservations) {
+                long nb = reservationRepository.findByServiceId(id).size();
+                details.add(nb + " réservation" + (nb > 1 ? "s" : ""));
+            }
+            if (hasFileAttente) {
+                long nb = fileAttenteRepository.findByStatutNot(StatutFileAttente.ANNULE)
+                        .stream().filter(fa -> fa.getService().getId().equals(id)).count();
+                details.add(nb + " entrée" + (nb > 1 ? "s" : "") + " en file d'attente");
+            }
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Ce service ne peut pas être supprimé car il est lié à des réservations ou une file d'attente.");
+                    "Ce service ne peut pas être supprimé car il est lié à : "
+                            + String.join(", ", details) + ".");
         }
 
-        // Aucune liaison → suppression dans le bon ordre
+        // Suppression dans le bon ordre
         disponibiliteRepository.findByServiceId(id)
                 .forEach(d -> disponibiliteRepository.deleteById(d.getId()));
+
+        // Pour RESSOURCE_PARTAGEE : supprimer les ressources automatiquement
+        // Pour les autres types : les ressources ne devraient pas exister, mais on les supprime aussi
         ressourceRepository.findByServiceId(id)
                 .forEach(r -> ressourceRepository.deleteById(r.getId()));
+
         configServiceRepository.findByServiceId(id)
                 .ifPresent(c -> configServiceRepository.deleteById(c.getId()));
         serviceRepository.delete(service);

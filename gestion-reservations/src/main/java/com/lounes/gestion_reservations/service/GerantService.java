@@ -165,6 +165,22 @@ public class GerantService {
         return toResponse(user);
     }
 
+    public void supprimerDefinitivement(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gérant introuvable"));
+
+        // Vérifier si le gérant est encore assigné à une entreprise
+        Optional<Entreprise> entrepriseOpt = entrepriseRepository.findByGerantId(id);
+        if (entrepriseOpt.isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ce gérant est encore assigné à l'entreprise \""
+                            + entrepriseOpt.get().getNom()
+                            + "\". Réassignez ou retirez l'entreprise avant de supprimer ce gérant.");
+        }
+
+        userRepository.delete(user);
+    }
+
     public void delete(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gérant introuvable"));

@@ -102,6 +102,13 @@ public class EmployeController {
         return ResponseEntity.ok("Employé désarchivé et rattaché avec succès !");
     }
 
+    @DeleteMapping("/{id}/supprimer")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<?> supprimerDefinitivement(@PathVariable Long id) {
+        employeService.supprimerDefinitivement(id);
+        return ResponseEntity.ok("Employé supprimé définitivement.");
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<?> desactiver(@PathVariable Long id) {

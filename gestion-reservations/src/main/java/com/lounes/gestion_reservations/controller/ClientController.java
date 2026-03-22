@@ -86,6 +86,13 @@ public class ClientController {
         return ResponseEntity.ok(clientService.setArchived(id, false));
     }
 
+    @DeleteMapping("/{id}/supprimer")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<?> supprimerDefinitivement(@PathVariable Long id) {
+        clientService.supprimerDefinitivement(id);
+        return ResponseEntity.ok("Client supprimé définitivement.");
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

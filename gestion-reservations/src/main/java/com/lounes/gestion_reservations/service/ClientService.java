@@ -27,6 +27,7 @@ public class ClientService {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private ReservationRepository reservationRepository;
     @Autowired private FileAttenteRepository fileAttenteRepository;
+    @Autowired private AvisRepository avisRepository;
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -368,6 +369,46 @@ public class ClientService {
         client.removeEntreprise(entreprise);
         clientRepository.save(client);
         return ResponseEntity.ok(Map.of("message", "Client retiré de " + entreprise.getNom()));
+    }
+
+    @Transactional
+    public void supprimerDefinitivement(Long id) {
+        Client client = clientRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
+
+        List<String> relations = new ArrayList<>();
+
+        // 1. Entreprises associées ?
+        if (!client.getEntreprises().isEmpty()) {
+            String noms = client.getEntreprises().stream()
+                    .map(Entreprise::getNom)
+                    .collect(Collectors.joining(", "));
+            relations.add("entreprise(s) : " + noms);
+        }
+
+        // 2. Réservations liées ?
+        long nbReservations = reservationRepository.findByClientId(id).size();
+        if (nbReservations > 0)
+            relations.add(nbReservations + " réservation(s)");
+
+        // 3. File d'attente liée ?
+        long nbFileAttente = fileAttenteRepository.findByClientId(id).size();
+        if (nbFileAttente > 0)
+            relations.add(nbFileAttente + " entrée(s) en file d'attente");
+
+        // 4. Avis liés ?
+        long nbAvis = avisRepository.findByClientId(id).size();
+        if (nbAvis > 0)
+            relations.add(nbAvis + " avis");
+
+        if (!relations.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ce client est lié à : " + String.join(", ", relations)
+                            + ". Supprimez ces relations avant de supprimer le client.");
+        }
+
+        clientRepository.delete(client);
+        userRepository.delete(client.getUser());
     }
 
     public void delete(Long id) {

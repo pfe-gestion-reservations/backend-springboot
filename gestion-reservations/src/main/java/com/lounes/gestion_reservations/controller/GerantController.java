@@ -71,6 +71,13 @@ public class GerantController {
         return ResponseEntity.ok(gerantService.desarchiver(id));
     }
 
+    @DeleteMapping("/{id}/supprimer")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<?> supprimerDefinitivement(@PathVariable Long id) {
+        gerantService.supprimerDefinitivement(id);
+        return ResponseEntity.ok("Gérant supprimé définitivement.");
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
