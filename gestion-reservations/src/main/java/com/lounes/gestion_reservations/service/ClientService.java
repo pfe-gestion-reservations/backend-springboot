@@ -95,71 +95,48 @@ public class ClientService {
     }
 
     // ─── CHECK TÉLÉPHONE ──────────────────────────────────────────────────────
-    // Statuts : NOT_FOUND | ALREADY_TAKEN | ARCHIVED
     public Map<String, Object> findByTelephone(String numtel) {
         Optional<Client> clientOpt = clientRepository.findByNumtel(numtel);
         if (clientOpt.isEmpty()) return Map.of("status", "NOT_FOUND");
-
         Client client = clientOpt.get();
-
-        // Client archivé
         if (Boolean.TRUE.equals(client.getArchived())) {
-            return Map.of(
-                    "status", "ARCHIVED",
+            return Map.of("status", "ARCHIVED",
                     "clientId", client.getId(),
                     "nom", client.getUser().getNom(),
                     "prenom", client.getUser().getPrenom(),
                     "email", client.getUser().getEmail(),
-                    "numtel", numtel
-            );
+                    "numtel", numtel);
         }
-
-        // Numéro utilisé par un client actif → retourner ses détails pour proposer l'association
-        return Map.of(
-                "status", "ALREADY_TAKEN",
+        return Map.of("status", "ALREADY_TAKEN",
                 "clientId", client.getId(),
                 "nom", client.getUser().getNom(),
                 "prenom", client.getUser().getPrenom(),
                 "email", client.getUser().getEmail(),
-                "numtel", numtel
-        );
+                "numtel", numtel);
     }
 
     // ─── CHECK EMAIL ──────────────────────────────────────────────────────────
-    // Statuts : NOT_FOUND | ROLE_CLIENT | EMAIL_OTHER_ROLE
     public Map<String, Object> checkEmail(String email) {
         Optional<User> userOpt = userRepository.findByEmail(email);
-
-        if (userOpt.isEmpty()) {
-            return Map.of("status", "NOT_FOUND");
-        }
-
+        if (userOpt.isEmpty()) return Map.of("status", "NOT_FOUND");
         User user = userOpt.get();
-        boolean isClient = user.getRoles().stream()
-                .anyMatch(r -> r.getName() == ERole.ROLE_CLIENT);
-
+        boolean isClient = user.getRoles().stream().anyMatch(r -> r.getName() == ERole.ROLE_CLIENT);
         if (isClient) {
             Optional<Client> clientOpt = clientRepository.findByUser(user);
             if (clientOpt.isPresent() && Boolean.TRUE.equals(clientOpt.get().getArchived())) {
-                // Client archivé → informer seulement
                 Client client = clientOpt.get();
-                return Map.of(
-                        "status", "ROLE_CLIENT_ARCHIVED",
+                return Map.of("status", "ROLE_CLIENT_ARCHIVED",
                         "clientId", client.getId(),
                         "nom", user.getNom(),
                         "prenom", user.getPrenom(),
-                        "email", user.getEmail()
-                );
+                        "email", user.getEmail());
             }
-            // Client actif → retourner son id pour permettre l'association directe
             Client client = clientOpt.orElseThrow();
-            return Map.of(
-                    "status", "ROLE_CLIENT",
+            return Map.of("status", "ROLE_CLIENT",
                     "clientId", client.getId(),
                     "nom", user.getNom(),
                     "prenom", user.getPrenom(),
-                    "email", user.getEmail()
-            );
+                    "email", user.getEmail());
         } else {
             return Map.of("status", "EMAIL_OTHER_ROLE",
                     "message", "Un utilisateur avec un autre rôle possède déjà ce mail. Choisissez un autre mail.");
@@ -172,42 +149,33 @@ public class ClientService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
         Entreprise entreprise = entrepriseRepository.findById(entrepriseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise non trouvée"));
-
-        boolean dejaAssocie = client.getEntreprises().stream()
-                .anyMatch(e -> e.getId().equals(entrepriseId));
+        boolean dejaAssocie = client.getEntreprises().stream().anyMatch(e -> e.getId().equals(entrepriseId));
         if (dejaAssocie) {
             return ResponseEntity.badRequest().body(Map.of(
                     "error", "ALREADY_ASSOCIATED",
-                    "message", "Ce client est déjà associé à cette entreprise."
-            ));
+                    "message", "Ce client est déjà associé à cette entreprise."));
         }
-
         if (Boolean.TRUE.equals(client.getUser().getArchived())) {
             client.getUser().setArchived(false);
             client.setArchived(false);
             userRepository.save(client.getUser());
         }
-
         client.addEntreprise(entreprise);
         client.setCreatedBy(getCurrentUser().getEmail());
         Client saved = clientRepository.save(client);
-
         return ResponseEntity.ok(Map.of(
                 "status", "ASSOCIATED",
                 "message", "Client associé à " + entreprise.getNom() + " avec succès.",
-                "client", toResponse(saved)
-        ));
+                "client", toResponse(saved)));
     }
 
     // ─── DÉSARCHIVER ET ASSOCIER ──────────────────────────────────────────────
     public ResponseEntity<?> desarchiverEtAssocier(Long clientId, Long entrepriseId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
-
         client.getUser().setArchived(false);
         client.setArchived(false);
         userRepository.save(client.getUser());
-
         if (entrepriseId != null) {
             entrepriseRepository.findById(entrepriseId).ifPresent(client::addEntreprise);
         }
@@ -227,7 +195,6 @@ public class ClientService {
             return clientRepository.findByEntrepriseId(entreprise.getId()).stream()
                     .map(this::toResponse).collect(Collectors.toList());
         } else {
-            // EMPLOYE → tous les clients de son entreprise
             Entreprise entreprise = entrepriseRepository.findByEmployeUserId(currentUser.getId()).orElse(null);
             if (entreprise == null) return List.of();
             return clientRepository.findByEntrepriseId(entreprise.getId()).stream()
@@ -251,58 +218,35 @@ public class ClientService {
     public ResponseEntity<?> create(ClientRequest request) {
         User currentUser = getCurrentUser();
         Entreprise entreprise = resolveEntreprise(currentUser, request.getEntrepriseId());
-
-        // Vérification email
         Optional<User> existingByEmail = userRepository.findByEmail(request.getEmail());
         if (existingByEmail.isPresent()) {
             User existingUser = existingByEmail.get();
-            boolean isClient = existingUser.getRoles().stream()
-                    .anyMatch(r -> r.getName() == ERole.ROLE_CLIENT);
-            if (isClient) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "error", "ROLE_CLIENT",
-                        "message", "Un client possède déjà ce mail."
-                ));
-            }
-            return ResponseEntity.badRequest().body(Map.of(
-                    "error", "EMAIL_OTHER_ROLE",
-                    "message", "Un utilisateur avec un autre rôle possède déjà ce mail."
-            ));
+            boolean isClient = existingUser.getRoles().stream().anyMatch(r -> r.getName() == ERole.ROLE_CLIENT);
+            if (isClient) return ResponseEntity.badRequest().body(Map.of("error", "ROLE_CLIENT", "message", "Un client possède déjà ce mail."));
+            return ResponseEntity.badRequest().body(Map.of("error", "EMAIL_OTHER_ROLE", "message", "Un utilisateur avec un autre rôle possède déjà ce mail."));
         }
-
-        // Vérification numéro de téléphone
         if (request.getNumtel() != null && !request.getNumtel().isBlank()) {
             Optional<Client> existingByTel = clientRepository.findByNumtel(request.getNumtel());
-            if (existingByTel.isPresent()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "error", "TEL_ALREADY_TAKEN",
-                        "message", "Ce numéro de téléphone est déjà utilisé."
-                ));
-            }
+            if (existingByTel.isPresent()) return ResponseEntity.badRequest().body(Map.of("error", "TEL_ALREADY_TAKEN", "message", "Ce numéro de téléphone est déjà utilisé."));
         }
-
-        // Création
         User userClient = new User();
         userClient.setNom(request.getNom());
         userClient.setPrenom(request.getPrenom());
         userClient.setEmail(request.getEmail());
         userClient.setPassword(passwordEncoder.encode(
                 request.getPassword() != null && !request.getPassword().isBlank()
-                        ? request.getPassword() : UUID.randomUUID().toString()
-        ));
+                        ? request.getPassword() : UUID.randomUUID().toString()));
         userClient.setArchived(false);
         Role clientRole = roleRepository.findByName(ERole.ROLE_CLIENT)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role CLIENT non trouvé"));
         userClient.setRoles(Set.of(clientRole));
         userRepository.save(userClient);
-
         Client client = new Client();
         client.setUser(userClient);
         client.setNumtel(request.getNumtel());
         client.setArchived(false);
         client.setCreatedBy(currentUser.getEmail());
         if (entreprise != null) client.addEntreprise(entreprise);
-
         return ResponseEntity.ok(toResponse(clientRepository.save(client)));
     }
 
@@ -321,6 +265,7 @@ public class ClientService {
     }
 
     // ─── ARCHIVER / DÉSARCHIVER ───────────────────────────────────────────────
+    @Transactional
     public ClientResponse setArchived(Long id, boolean archived) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
@@ -329,8 +274,27 @@ public class ClientService {
         client.getUser().setArchived(archived);
         userRepository.save(client.getUser());
 
-        // À l'archivage : supprimer toutes les associations avec les entreprises
         if (archived) {
+            // Annuler toutes les réservations actives
+            reservationRepository.findByClientId(id).stream()
+                    .filter(r -> r.getStatut() == StatutReservation.EN_ATTENTE
+                            || r.getStatut() == StatutReservation.CONFIRMEE
+                            || r.getStatut() == StatutReservation.EN_COURS)
+                    .forEach(r -> {
+                        r.setStatut(StatutReservation.ANNULEE);
+                        reservationRepository.save(r);
+                    });
+
+            // Annuler toutes les entrées actives en file d'attente
+            fileAttenteRepository.findByClientId(id).stream()
+                    .filter(f -> f.getStatut() == StatutFileAttente.EN_ATTENTE
+                            || f.getStatut() == StatutFileAttente.APPELE)
+                    .forEach(f -> {
+                        f.setStatut(StatutFileAttente.ANNULE);
+                        fileAttenteRepository.save(f);
+                    });
+
+            // Dissocier de toutes les entreprises
             new ArrayList<>(client.getEntreprises()).forEach(client::removeEntreprise);
         }
 
@@ -344,69 +308,44 @@ public class ClientService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
         Entreprise entreprise = entrepriseRepository.findById(entrepriseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise non trouvée"));
-
-        boolean associe = client.getEntreprises().stream()
-                .anyMatch(e -> e.getId().equals(entrepriseId));
+        boolean associe = client.getEntreprises().stream().anyMatch(e -> e.getId().equals(entrepriseId));
         if (!associe) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "error", "NOT_ASSOCIATED",
-                    "message", "Ce client n'est pas associé à cette entreprise."
-            ));
+            return ResponseEntity.badRequest().body(Map.of("error", "NOT_ASSOCIATED", "message", "Ce client n'est pas associé à cette entreprise."));
         }
-
-        // Annuler les réservations actives du client pour cette entreprise
         reservationRepository.findByClientId(clientId).stream()
                 .filter(r -> r.getEntreprise() != null && r.getEntreprise().getId().equals(entrepriseId))
                 .filter(r -> r.getStatut() == StatutReservation.EN_ATTENTE || r.getStatut() == StatutReservation.CONFIRMEE)
                 .forEach(r -> { r.setStatut(StatutReservation.ANNULEE); reservationRepository.save(r); });
-
-        // Annuler les entrées en file d'attente actives du client pour cette entreprise
         fileAttenteRepository.findByClientId(clientId).stream()
                 .filter(f -> f.getEntreprise() != null && f.getEntreprise().getId().equals(entrepriseId))
                 .filter(f -> f.getStatut() == StatutFileAttente.EN_ATTENTE || f.getStatut() == StatutFileAttente.APPELE)
                 .forEach(f -> { f.setStatut(StatutFileAttente.ANNULE); fileAttenteRepository.save(f); });
-
         client.removeEntreprise(entreprise);
         clientRepository.save(client);
         return ResponseEntity.ok(Map.of("message", "Client retiré de " + entreprise.getNom()));
     }
 
+    // ─── SUPPRIMER DÉFINITIVEMENT ─────────────────────────────────────────────
     @Transactional
     public void supprimerDefinitivement(Long id) {
         Client client = clientRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
-
         List<String> relations = new ArrayList<>();
-
-        // 1. Entreprises associées ?
         if (!client.getEntreprises().isEmpty()) {
-            String noms = client.getEntreprises().stream()
-                    .map(Entreprise::getNom)
-                    .collect(Collectors.joining(", "));
+            String noms = client.getEntreprises().stream().map(Entreprise::getNom).collect(Collectors.joining(", "));
             relations.add("entreprise(s) : " + noms);
         }
-
-        // 2. Réservations liées ?
         long nbReservations = reservationRepository.findByClientId(id).size();
-        if (nbReservations > 0)
-            relations.add(nbReservations + " réservation(s)");
-
-        // 3. File d'attente liée ?
+        if (nbReservations > 0) relations.add(nbReservations + " réservation(s)");
         long nbFileAttente = fileAttenteRepository.findByClientId(id).size();
-        if (nbFileAttente > 0)
-            relations.add(nbFileAttente + " entrée(s) en file d'attente");
-
-        // 4. Avis liés ?
+        if (nbFileAttente > 0) relations.add(nbFileAttente + " entrée(s) en file d'attente");
         long nbAvis = avisRepository.findByClientId(id).size();
-        if (nbAvis > 0)
-            relations.add(nbAvis + " avis");
-
+        if (nbAvis > 0) relations.add(nbAvis + " avis");
         if (!relations.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Ce client est lié à : " + String.join(", ", relations)
                             + ". Supprimez ces relations avant de supprimer le client.");
         }
-
         clientRepository.delete(client);
         userRepository.delete(client.getUser());
     }

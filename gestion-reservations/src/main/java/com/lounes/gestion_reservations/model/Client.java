@@ -65,4 +65,6 @@ public class Client {
     public void setEntreprises(Set<Entreprise> entreprises) { this.entreprises = entreprises; }
     public void addEntreprise(Entreprise e) { this.entreprises.add(e); }
     public void removeEntreprise(Entreprise e) { this.entreprises.remove(e); }
+
+
 }

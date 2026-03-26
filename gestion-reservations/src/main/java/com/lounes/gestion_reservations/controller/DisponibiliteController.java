@@ -50,4 +50,11 @@ public class DisponibiliteController {
         disponibiliteService.delete(id);
         return ResponseEntity.ok("Disponibilité supprimée !");
     }
+
+    @DeleteMapping("/{id}/force")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT')")
+    public ResponseEntity<Void> deleteForce(@PathVariable Long id) {
+        disponibiliteService.deleteWithCancellation(id);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -1,7 +1,6 @@
 package com.lounes.gestion_reservations.repo;
 
-import com.lounes.gestion_reservations.model.Client;
-import com.lounes.gestion_reservations.model.User;
+import com.lounes.gestion_reservations.model.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -38,4 +37,6 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
     Optional<Client> findByUserEmailWithEntreprises(String email);
 
     Optional<Client> findByUser(User user);
+
+
 }

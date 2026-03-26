@@ -1,6 +1,8 @@
 package com.lounes.gestion_reservations.repo;
 
+import com.lounes.gestion_reservations.model.FileAttente;
 import com.lounes.gestion_reservations.model.Reservation;
+import com.lounes.gestion_reservations.model.StatutFileAttente;
 import com.lounes.gestion_reservations.model.StatutReservation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -8,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
@@ -61,4 +64,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     boolean hasServiceOverlap(@Param("serviceId") Long serviceId,
                               @Param("heureDebut") LocalDateTime heureDebut,
                               @Param("heureFin") LocalDateTime heureFin,
-                              @Param("excludeId") Long excludeId);}
+                              @Param("excludeId") Long excludeId);
+
+    List<Reservation> findByClientIdAndStatutNot(Long clientId, StatutReservation statut);
+
+
+}

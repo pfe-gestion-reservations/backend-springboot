@@ -2,11 +2,12 @@ package com.lounes.gestion_reservations.service;
 
 import com.lounes.gestion_reservations.dto.DisponibiliteRequest;
 import com.lounes.gestion_reservations.dto.DisponibiliteResponse;
-import com.lounes.gestion_reservations.model.Disponibilite;
-import com.lounes.gestion_reservations.model.JourSemaine;
-import com.lounes.gestion_reservations.model.ServiceEntity;
+import com.lounes.gestion_reservations.model.*;
 import com.lounes.gestion_reservations.repo.DisponibiliteRepository;
+import com.lounes.gestion_reservations.repo.FileAttenteRepository;
+import com.lounes.gestion_reservations.repo.ReservationRepository;
 import com.lounes.gestion_reservations.repo.ServiceRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,7 +19,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class DisponibiliteService {
-
+    @Autowired private ReservationRepository reservationRepository;
+    @Autowired private FileAttenteRepository fileAttenteRepository;
     @Autowired private DisponibiliteRepository disponibiliteRepository;
     @Autowired private ServiceRepository serviceRepository;
 
@@ -104,9 +106,81 @@ public class DisponibiliteService {
         return toResponse(disponibiliteRepository.save(dispo));
     }
 
+    @Transactional
     public void delete(Long id) {
-        if (!disponibiliteRepository.existsById(id))
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Disponibilité non trouvée");
+        Disponibilite dispo = disponibiliteRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Disponibilité non trouvée"));
+
+        LocalTime dispoDebut = dispo.getHeureDebut();
+        LocalTime dispoFin   = dispo.getHeureFin();
+        Long serviceId       = dispo.getService().getId();
+
+        // Réservations actives qui tombent dans ce créneau
+        List<Reservation> resLiees = reservationRepository.findByServiceId(serviceId).stream()
+                .filter(r -> r.getStatut() != StatutReservation.ANNULEE
+                        && r.getStatut() != StatutReservation.TERMINEE)
+                .filter(r -> {
+                    LocalTime rDebut = r.getHeureDebut().toLocalTime();
+                    return !rDebut.isBefore(dispoDebut) && rDebut.isBefore(dispoFin);
+                })
+                .collect(Collectors.toList());
+
+        // Entrées de file d'attente actives sur ce créneau
+        List<FileAttente> fileLiees = fileAttenteRepository.findByServiceId(serviceId).stream()
+                .filter(f -> f.getStatut() == StatutFileAttente.EN_ATTENTE
+                        || f.getStatut() == StatutFileAttente.APPELE)
+                .filter(f -> {
+                    if (f.getHeureDebut() == null) return false;
+                    LocalTime fDebut = f.getHeureDebut().toLocalTime();
+                    return !fDebut.isBefore(dispoDebut) && fDebut.isBefore(dispoFin);
+                })
+                .collect(Collectors.toList());
+
+        if (!resLiees.isEmpty() || !fileLiees.isEmpty()) {
+            String msg = "Ce créneau a " + resLiees.size() + " réservation(s) et "
+                    + fileLiees.size() + " entrée(s) en file d'attente actives.";
+            throw new ResponseStatusException(HttpStatus.CONFLICT, msg);
+        }
+
+        disponibiliteRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void deleteWithCancellation(Long id) {
+        Disponibilite dispo = disponibiliteRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Disponibilité non trouvée"));
+
+        LocalTime dispoDebut = dispo.getHeureDebut();
+        LocalTime dispoFin   = dispo.getHeureFin();
+        Long serviceId       = dispo.getService().getId();
+
+        // Annuler les réservations actives liées
+        reservationRepository.findByServiceId(serviceId).stream()
+                .filter(r -> r.getStatut() != StatutReservation.ANNULEE
+                        && r.getStatut() != StatutReservation.TERMINEE)
+                .filter(r -> {
+                    LocalTime rDebut = r.getHeureDebut().toLocalTime();
+                    return !rDebut.isBefore(dispoDebut) && rDebut.isBefore(dispoFin);
+                })
+                .forEach(r -> {
+                    r.setStatut(StatutReservation.ANNULEE);
+                    reservationRepository.save(r);
+                });
+
+        // Annuler les files d'attente actives liées
+        fileAttenteRepository.findByServiceId(serviceId).stream()
+                .filter(f -> f.getStatut() == StatutFileAttente.EN_ATTENTE
+                        || f.getStatut() == StatutFileAttente.APPELE)
+                .filter(f -> {
+                    if (f.getHeureDebut() == null) return false;
+                    LocalTime fDebut = f.getHeureDebut().toLocalTime();
+                    return !fDebut.isBefore(dispoDebut) && fDebut.isBefore(dispoFin);
+                })
+                .forEach(f -> {
+                    f.setStatut(StatutFileAttente.ANNULE);
+                    fileAttenteRepository.save(f);
+                });
+
         disponibiliteRepository.deleteById(id);
     }
 

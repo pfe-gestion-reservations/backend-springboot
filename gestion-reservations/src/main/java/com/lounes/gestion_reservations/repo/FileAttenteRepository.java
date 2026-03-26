@@ -36,4 +36,6 @@ public interface FileAttenteRepository extends JpaRepository<FileAttente, Long> 
 
     // ── Suppression en cascade lors du delete d'une réservation ──
     void deleteByReservationId(Long reservationId);
+    List<FileAttente> findByServiceId(Long serviceId);
+
 }

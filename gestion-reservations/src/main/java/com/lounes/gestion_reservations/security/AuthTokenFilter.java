@@ -37,7 +37,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 }
 
                 var authorities = roles.stream()
-                        .map(SimpleGrantedAuthority::new)
+                        .map(r -> new SimpleGrantedAuthority(r.startsWith("ROLE_") ? r : "ROLE_" + r))
                         .toList();
 
                 var userDetails = userDetailsService.loadUserByUsername(email);

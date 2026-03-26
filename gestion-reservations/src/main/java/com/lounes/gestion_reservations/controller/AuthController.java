@@ -5,6 +5,7 @@ import com.lounes.gestion_reservations.dto.LoginRequest;
 import com.lounes.gestion_reservations.dto.SignupRequest;
 import com.lounes.gestion_reservations.model.*;
 import com.lounes.gestion_reservations.repo.ClientRepository;
+import com.lounes.gestion_reservations.repo.EmployeRepository;
 import com.lounes.gestion_reservations.repo.EntrepriseRepository;
 import com.lounes.gestion_reservations.repo.RoleRepository;
 import com.lounes.gestion_reservations.repo.UserRepository;
@@ -35,6 +36,7 @@ public class AuthController {
     @Autowired private UserRepository userRepository;
     @Autowired private RoleRepository roleRepository;
     @Autowired private ClientRepository clientRepository;
+    @Autowired private EmployeRepository employeRepository;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JwtUtils jwtUtils;
     @Autowired private EntrepriseRepository entrepriseRepository;
@@ -53,6 +55,53 @@ public class AuthController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Long entrepriseId = resolveEntrepriseId(user, roles);
+
+        // ── User archivé au niveau User (tous rôles sauf SUPER_ADMIN) ──────────
+        if (Boolean.TRUE.equals(user.getArchived()) && !roles.contains("ROLE_SUPER_ADMIN")) {
+            String reason = roles.contains("ROLE_GERANT")  ? "GERANT_ARCHIVE"  :
+                    roles.contains("ROLE_EMPLOYE") ? "EMPLOYE_ARCHIVE" :
+                            roles.contains("ROLE_CLIENT")  ? "CLIENT_ARCHIVE"  : "COMPTE_ARCHIVE";
+            return ResponseEntity.status(403).body(Map.of(
+                    "reason",  reason,
+                    "message", "Votre compte a été archivé. Contactez l'administrateur."
+            ));
+        }
+
+        // ── Gérant sans entreprise (libre) ──────────────────────────────────────
+        if (roles.contains("ROLE_GERANT") && entrepriseId == null) {
+            return ResponseEntity.status(403).body(Map.of(
+                    "reason", "GERANT_SANS_ENTREPRISE",
+                    "message", "Votre compte gérant n'est pas encore associé à une entreprise."
+            ));
+        }
+
+        // ── Employé archivé (table employes) ou sans entreprise ────────────────
+        if (roles.contains("ROLE_EMPLOYE")) {
+            var employe = employeRepository.findByUserId(user.getId()).orElse(null);
+            if (employe != null && Boolean.TRUE.equals(employe.getArchived())) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "reason", "EMPLOYE_ARCHIVE",
+                        "message", "Votre compte employé a été archivé. Contactez l'administrateur."
+                ));
+            }
+            if (employe == null || employe.getEntreprise() == null) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "reason", "EMPLOYE_SANS_ENTREPRISE",
+                        "message", "Votre compte employé n'est rattaché à aucune entreprise."
+                ));
+            }
+        }
+
+        // ── Client archivé (table clients) ─────────────────────────────────────
+        if (roles.contains("ROLE_CLIENT")) {
+            var client = clientRepository.findByUserId(user.getId()).orElse(null);
+            if (client != null && Boolean.TRUE.equals(client.getArchived())) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "reason", "CLIENT_ARCHIVE",
+                        "message", "Votre compte client a été archivé. Contactez l'administrateur."
+                ));
+            }
+        }
 
         return ResponseEntity.ok(new JwtResponse(jwt, userDetails.getId(),
                 userDetails.getUsername(), user.getNom(), user.getPrenom(), roles, entrepriseId));
@@ -145,4 +194,4 @@ public class AuthController {
         }
         return null;
     }
-}   
+}
