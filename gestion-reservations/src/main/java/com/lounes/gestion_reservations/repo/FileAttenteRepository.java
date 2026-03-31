@@ -31,10 +31,8 @@ public interface FileAttenteRepository extends JpaRepository<FileAttente, Long> 
 
     boolean existsByReservationIdAndStatutNot(Long reservationId, StatutFileAttente statut);
 
-    // ── Suppression en cascade lors du delete d'un service ──
     void deleteByServiceId(Long serviceId);
 
-    // ── Suppression en cascade lors du delete d'une réservation ──
     void deleteByReservationId(Long reservationId);
     List<FileAttente> findByServiceId(Long serviceId);
 

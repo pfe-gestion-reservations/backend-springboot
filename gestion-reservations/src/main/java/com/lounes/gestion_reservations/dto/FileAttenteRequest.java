@@ -7,17 +7,12 @@ public class FileAttenteRequest {
 
     @NotNull
     private Long clientId;
-
-    // EMPLOYE_DEDIE / HYBRIDE
-    private Long employeId;
-
+    private Long employeId; //pour employe dedie/hybride
     @NotNull
     private Long serviceId;
-
-    // Pour RESSOURCE_PARTAGEE : créneau souhaité
+    //pour ressources partagés: creneau souhaité
     private LocalDateTime heureDebut;
-
-    // Pour EMPLOYE_DEDIE / HYBRIDE : réservation existante
+    //pour employe dedie/hybride reservation existante
     private Long reservationId;
 
     public Long getClientId()                  { return clientId; }

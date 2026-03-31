@@ -21,21 +21,21 @@ public class ReservationController {
 
     @Autowired
     private ReservationService reservationService;
-
+    //afficher toutes les reservations
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE','CLIENT')")
     public ResponseEntity<List<ReservationResponse>> getAll() {
-        // Le filtrage par rôle est géré dans ReservationService
+        //le filtrage par role est géré par reservation service
         return ResponseEntity.ok(reservationService.getAll());
     }
-
+    //creer une reservation
     @PostMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE','CLIENT')")
     public ResponseEntity<ReservationResponse> create(
             @Valid @RequestBody CreateReservationRequest request) {
         return ResponseEntity.ok(reservationService.create(request));
     }
-
+    //maj reservztion
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE')")
     public ResponseEntity<ReservationResponse> update(
@@ -43,7 +43,7 @@ public class ReservationController {
             @Valid @RequestBody CreateReservationRequest request) {
         return ResponseEntity.ok(reservationService.update(id, request));
     }
-
+    //maj statut
     @PatchMapping("/{id}/statut")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE')")
     public ResponseEntity<ReservationResponse> updateStatut(
@@ -51,13 +51,13 @@ public class ReservationController {
             @RequestParam String statut) {
         return ResponseEntity.ok(reservationService.updateStatut(id, statut));
     }
-
+    //annuler par id client
     @PatchMapping("/{id}/annuler")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE','CLIENT')")
     public ResponseEntity<ReservationResponse> annulerParClient(@PathVariable Long id) {
         return ResponseEntity.ok(reservationService.annulerParClient(id));
     }
-
+    //supprimer reservation
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

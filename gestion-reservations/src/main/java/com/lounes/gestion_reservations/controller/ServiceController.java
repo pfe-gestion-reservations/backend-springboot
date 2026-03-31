@@ -28,7 +28,7 @@ public class ServiceController {
 
     // ✅ GET /api/services/by-entreprise/{entrepriseId} — SUPER_ADMIN filtre par entreprise
     @GetMapping("/by-entreprise/{entrepriseId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('GERANT') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<ServiceResponse>> getByEntreprise(@PathVariable Long entrepriseId) {
         return ResponseEntity.ok(serviceService.getByEntreprise(entrepriseId));
     }

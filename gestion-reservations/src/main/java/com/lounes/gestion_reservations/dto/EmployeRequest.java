@@ -11,10 +11,8 @@ public class EmployeRequest {
     @NotBlank
     @Email
     private String email;
-    // password optionnel : obligatoire pour nouveau compte, ignoré pour rattachement
     private String password;
     private String specialite;
-    // entrepriseId : obligatoire pour SUPER_ADMIN, ignoré pour GERANT (déduit du contexte)
     private Long entrepriseId;
 
     public String getNom() { return nom; }

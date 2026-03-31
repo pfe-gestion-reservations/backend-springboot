@@ -21,7 +21,6 @@ public class EntrepriseService {
     @Autowired private RoleRepository roleRepository;
 
     public EntrepriseResponse create(EntrepriseRequest request) {
-        // Vérification unicité téléphone
         if (entrepriseRepository.existsByTelephone(request.getTelephone()))
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Une entreprise avec ce numéro de téléphone existe déjà !");
@@ -31,13 +30,10 @@ public class EntrepriseService {
 
         User gerant = userRepository.findById(request.getGerantId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gérant non trouvé"));
-
-        // Vérifier que le gérant n'est pas déjà assigné à une autre entreprise
         if (entrepriseRepository.findByGerantId(gerant.getId()).isPresent())
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Ce gérant est déjà assigné à une autre entreprise !");
 
-        // Assigner le rôle GERANT si pas encore
         Role roleGerant = roleRepository.findByName(ERole.ROLE_GERANT)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Role GERANT non trouvé"));
         gerant.getRoles().add(roleGerant);
@@ -71,8 +67,6 @@ public class EntrepriseService {
     public EntrepriseResponse update(Long id, EntrepriseRequest request) {
         Entreprise entreprise = entrepriseRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise non trouvée"));
-
-        // Vérification unicité téléphone (exclure l'entreprise actuelle)
         if (entrepriseRepository.existsByTelephoneAndIdNot(request.getTelephone(), id))
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Une entreprise avec ce numéro de téléphone existe déjà !");
@@ -85,7 +79,6 @@ public class EntrepriseService {
         entreprise.setTelephone(request.getTelephone());
         entreprise.setSecteur(secteur);
 
-        // Changer le gérant si différent
         if (!entreprise.getGerant().getId().equals(request.getGerantId())) {
             User newGerant = userRepository.findById(request.getGerantId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gérant non trouvé"));

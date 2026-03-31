@@ -19,8 +19,7 @@ import java.util.List;
 public class AvisController {
 
     @Autowired private AvisService avisService;
-
-    // ✅ CLIENT laisse un avis sur une réservation terminée
+    //le client laisse son avis sur une reseravtion terminé
     @PostMapping
     @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<AvisResponse> create(
@@ -29,15 +28,15 @@ public class AvisController {
         return ResponseEntity.ok(avisService.create(request, userDetails.getId()));
     }
 
-    // ✅ Chaque rôle voit les avis qui le concernent (filtrage dans le service)
-    //    SUPER_ADMIN → tous | GERANT/EMPLOYE → leur entreprise | CLIENT → ses réservations
+    //chaque user vois ses propres avis
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE','CLIENT')")
     public ResponseEntity<List<AvisResponse>> getAll() {
         return ResponseEntity.ok(avisService.getAvisForCurrentUser());
     }
 
-    // ✅ Tous les utilisateurs connectés peuvent voir les avis d'un service
+    //recuperer tous les avis d un service donné
+    //a verifier apres
     @GetMapping("/service/{serviceId}")
     @PreAuthorize("hasAnyRole('CLIENT','SUPER_ADMIN','GERANT','EMPLOYE')")
     public ResponseEntity<List<AvisResponse>> getByService(@PathVariable Long serviceId) {

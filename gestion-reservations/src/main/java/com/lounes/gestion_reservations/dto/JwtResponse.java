@@ -10,8 +10,7 @@ public class JwtResponse {
     private String nom;
     private String prenom;
     private List<String> roles;
-    private Long entrepriseId;  // null si pas GERANT
-
+    private Long entrepriseId;
     public JwtResponse(String token, Long id, String email, String nom, String prenom,
                        List<String> roles, Long entrepriseId) {
         this.token = token;

@@ -9,13 +9,10 @@ import java.util.List;
 
 public interface DisponibiliteRepository extends JpaRepository<Disponibilite, Long> {
 
-    // Toutes les dispos d'un service
     List<Disponibilite> findByServiceId(Long serviceId);
 
-    // Dispos d'un service pour un jour donné
     List<Disponibilite> findByServiceIdAndJour(Long serviceId, JourSemaine jour);
 
-    // Validation : heure dans une plage dispo du service
     List<Disponibilite> findByServiceIdAndJourAndHeureDebutLessThanEqualAndHeureFinGreaterThan(
             Long serviceId,
             JourSemaine jour,

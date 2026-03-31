@@ -15,7 +15,6 @@ public class FileAttente {
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
-    // Nullable — présent pour EMPLOYE_DEDIE / HYBRIDE
     @ManyToOne
     @JoinColumn(name = "employe_id", nullable = true)
     private Employe employe;
@@ -32,7 +31,6 @@ public class FileAttente {
     @JoinColumn(name = "entreprise_id", nullable = false)
     private Entreprise entreprise;
 
-    // Pour RESSOURCE_PARTAGEE : créneau demandé
     private LocalDateTime heureDebut;
 
     private LocalDateTime heureArrivee;

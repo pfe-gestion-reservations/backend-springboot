@@ -16,7 +16,7 @@ public class ConfigServiceRequest {
     private Boolean fileAttenteActive;
     private Integer avanceReservationJours;
     private Integer annulationHeures;
-    private Boolean tarifParPersonne = false;  // false=fixe, true=par personne
+    private Boolean tarifParPersonne = false;
 
     public Long getServiceId()                          { return serviceId; }
     public void setServiceId(Long serviceId)            { this.serviceId = serviceId; }

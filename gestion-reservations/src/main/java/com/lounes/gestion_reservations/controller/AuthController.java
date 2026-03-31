@@ -41,7 +41,7 @@ public class AuthController {
     @Autowired private JwtUtils jwtUtils;
     @Autowired private EntrepriseRepository entrepriseRepository;
 
-    // ─── LOGIN ────────────────────────────────────────────────────────────────
+    //login
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
@@ -56,7 +56,7 @@ public class AuthController {
 
         Long entrepriseId = resolveEntrepriseId(user, roles);
 
-        // ── User archivé au niveau User (tous rôles sauf SUPER_ADMIN) ──────────
+        //si le compte user est archivé
         if (Boolean.TRUE.equals(user.getArchived()) && !roles.contains("ROLE_SUPER_ADMIN")) {
             String reason = roles.contains("ROLE_GERANT")  ? "GERANT_ARCHIVE"  :
                     roles.contains("ROLE_EMPLOYE") ? "EMPLOYE_ARCHIVE" :
@@ -67,7 +67,7 @@ public class AuthController {
             ));
         }
 
-        // ── Gérant sans entreprise (libre) ──────────────────────────────────────
+        //si le gerant n a pas d entreprise
         if (roles.contains("ROLE_GERANT") && entrepriseId == null) {
             return ResponseEntity.status(403).body(Map.of(
                     "reason", "GERANT_SANS_ENTREPRISE",
@@ -75,7 +75,7 @@ public class AuthController {
             ));
         }
 
-        // ── Employé archivé (table employes) ou sans entreprise ────────────────
+        //si l employe est archivé ou bien sans entreprise
         if (roles.contains("ROLE_EMPLOYE")) {
             var employe = employeRepository.findByUserId(user.getId()).orElse(null);
             if (employe != null && Boolean.TRUE.equals(employe.getArchived())) {
@@ -92,7 +92,7 @@ public class AuthController {
             }
         }
 
-        // ── Client archivé (table clients) ─────────────────────────────────────
+        // si le client est archivé
         if (roles.contains("ROLE_CLIENT")) {
             var client = clientRepository.findByUserId(user.getId()).orElse(null);
             if (client != null && Boolean.TRUE.equals(client.getArchived())) {
@@ -107,8 +107,7 @@ public class AuthController {
                 userDetails.getUsername(), user.getNom(), user.getPrenom(), roles, entrepriseId));
     }
 
-    // ─── REFRESH PROFILE ─────────────────────────────────────────────────────
-    // Permet au gérant de récupérer son entrepriseId à jour sans se reconnecter
+    //fais le refresh des donnees + ceci est appelé a chaque fois pour recuperer les donnees mis a jour
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getMe() {
@@ -130,7 +129,8 @@ public class AuthController {
         ));
     }
 
-    // ─── SIGNUP ───────────────────────────────────────────────────────────────
+
+    //signup
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest signupRequest) {
         if (userRepository.existsByEmail(signupRequest.getEmail()))
@@ -160,7 +160,7 @@ public class AuthController {
                 "email",   savedUser.getEmail()));
     }
 
-    // ─── CREATE GÉRANT ────────────────────────────────────────────────────────
+    //creer gerant
     @PostMapping("/create-gerant")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> createGerant(@Valid @RequestBody SignupRequest signupRequest) {
@@ -185,7 +185,7 @@ public class AuthController {
                 "email",   user.getEmail()));
     }
 
-    // ─── HELPER ───────────────────────────────────────────────────────────────
+    //est ce que cet utilisateur est un gerant? a t il une entreprise? si oui donne moi son id
     private Long resolveEntrepriseId(User user, List<String> roles) {
         if (roles.contains("ROLE_GERANT")) {
             return entrepriseRepository.findByGerantId(user.getId())

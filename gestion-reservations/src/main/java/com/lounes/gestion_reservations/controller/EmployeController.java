@@ -22,7 +22,7 @@ public class EmployeController {
 
     @Autowired private EmployeService employeService;
 
-    // ─── CHECK EMAIL ──────────────────────────────────────────────────────────
+    //verifier existanec mail
     @GetMapping("/check-email")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<Map<String, Object>> checkEmail(
@@ -31,27 +31,26 @@ public class EmployeController {
         return ResponseEntity.ok(employeService.checkEmail(email, entrepriseId));
     }
 
+    //recuperer tous les employes
     @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<List<EmployeResponse>> getAll() {
         return ResponseEntity.ok(employeService.getAll());
     }
-
+    //recuperer les employes d une entreprise precise
     @GetMapping("/entreprise/{entrepriseId}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<List<EmployeResponse>> getByEntreprise(@PathVariable Long entrepriseId) {
         return ResponseEntity.ok(employeService.getByEntrepriseId(entrepriseId));
     }
-
+    // recuperer un employe precis
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<EmployeResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(employeService.getById(id));
     }
 
-    // ─── RATTACHER un employé FREE à une entreprise ──────────────────────────
-    // Accepte : { "email": "...", "entrepriseId": 5, "specialite": "..." }
-    // entrepriseId est optionnel : si absent, déduit depuis le gérant connecté
+    //rattacher un employe libre a une entreprise
     @PostMapping("/rattacher")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<?> rattacher(@RequestBody Map<String, Object> body) {
@@ -66,27 +65,27 @@ public class EmployeController {
         }
         return ResponseEntity.ok(employeService.rattacherByEmail(email, entrepriseId, specialite));
     }
-
+    //creer employe
     @PostMapping
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<?> create(@Valid @RequestBody EmployeRequest request) {
         return employeService.create(request);
     }
-
+    //maj employe
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<EmployeResponse> update(@PathVariable Long id,
                                                   @Valid @RequestBody EmployeRequest request) {
         return ResponseEntity.ok(employeService.update(id, request));
     }
-
+    //archiver employe
     @PatchMapping("/{id}/archiver")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<?> archiver(@PathVariable Long id) {
         employeService.archiver(id);
         return ResponseEntity.ok("Employé archivé avec succès !");
     }
-
+    //desarchiver employe
     @PatchMapping("/{id}/desarchiver")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<?> desarchiver(@PathVariable Long id) {
@@ -94,14 +93,14 @@ public class EmployeController {
         return ResponseEntity.ok("Employé désarchivé avec succès !");
     }
 
-    // Désarchiver ET rattacher à l'entreprise du gérant connecté
+    //desarchiver+ rattchaer employe
     @PatchMapping("/{id}/desarchiver-rattacher")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<?> desarchiverEtRattacher(@PathVariable Long id) {
         employeService.desarchiverEtRattacher(id);
         return ResponseEntity.ok("Employé désarchivé et rattaché avec succès !");
     }
-
+    //supprimer
     @DeleteMapping("/{id}/supprimer")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> supprimerDefinitivement(@PathVariable Long id) {
@@ -109,19 +108,19 @@ public class EmployeController {
         return ResponseEntity.ok("Employé supprimé définitivement.");
     }
 
-    @DeleteMapping("/{id}")
+    /*@DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<?> desactiver(@PathVariable Long id) {
         employeService.desactiver(id);
         return ResponseEntity.ok("Employé désactivé avec succès !");
-    }
-
+    }*/
+/*
     @PutMapping("/{id}/reactiver")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('GERANT')")
     public ResponseEntity<?> reactiver(@PathVariable Long id) {
         employeService.reactiver(id);
         return ResponseEntity.ok("Employé réactivé avec succès !");
     }
-
+*/
 
 }

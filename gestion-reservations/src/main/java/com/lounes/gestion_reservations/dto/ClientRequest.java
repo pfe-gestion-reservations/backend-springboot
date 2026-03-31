@@ -6,9 +6,8 @@ public class ClientRequest {
     private String email;
     private String password;
     private String numtel;
-    private Long entrepriseId; // utilisé par le SUPER_ADMIN pour cibler une entreprise
+    private Long entrepriseId;
 
-    // ── Getters & Setters ──
 
     public String getNom() { return nom; }
     public void setNom(String nom) { this.nom = nom; }

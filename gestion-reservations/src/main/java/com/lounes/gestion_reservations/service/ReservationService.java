@@ -29,7 +29,6 @@ public class ReservationService {
     @Autowired private RessourceRepository      ressourceRepo;
     @Autowired private FileAttenteRepository    fileAttenteRepo;
 
-    // ── helpers ──────────────────────────────────────────────────────────────
     private UserDetailsImpl getCurrentUserDetails() {
         return (UserDetailsImpl) SecurityContextHolder
                 .getContext().getAuthentication().getPrincipal();
@@ -40,7 +39,6 @@ public class ReservationService {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
     }
 
-    // Retourne null pour SUPER_ADMIN (l'entreprise sera déduite du service)
     private Entreprise getCurrentEntreprise() {
         UserDetailsImpl ud = getCurrentUserDetails();
         if (isSuperAdmin(ud)) return null;
@@ -50,14 +48,12 @@ public class ReservationService {
                                 HttpStatus.NOT_FOUND, "Entreprise introuvable")));
     }
 
-    // ── CALCUL DU PRIX ───────────────────────────────────────────────────────
     private Double calculerPrix(ServiceEntity service, ConfigService config, int nombrePersonnes) {
         if (service.getTarif() == null) return null;
         boolean parPersonne = config != null && Boolean.TRUE.equals(config.getTarifParPersonne());
         return parPersonne ? service.getTarif() * nombrePersonnes : service.getTarif();
     }
 
-    // ── VALIDATION DISPONIBILITÉ ─────────────────────────────────────────────
     private void validerDisponibilite(Long serviceId, LocalDateTime heureDebut) {
         JourSemaine jour = JourSemaine.valueOf(
                 heureDebut.getDayOfWeek().name()
@@ -75,7 +71,6 @@ public class ReservationService {
                     "Ce service n'est pas disponible le " + jour.name() + " à " + heure);
     }
 
-    // ── TROUVER RESSOURCE OPTIMALE ───────────────────────────────────────────
     private Ressource trouverRessourceOptimale(Long serviceId, LocalDateTime heureDebut,
                                                LocalDateTime heureFin, Long excludeReservationId) {
         List<Ressource> ressources = ressourceRepo.findByServiceIdAndArchivedFalse(serviceId);
@@ -96,7 +91,6 @@ public class ReservationService {
         return trouverRessourceOptimale(serviceId, heureDebut, heureFin, excludeReservationId);
     }
 
-    // ── NOTIFIER PREMIER EN FILE ─────────────────────────────────────────────
     private void notifierPremierEnFile(Long serviceId, LocalDateTime heureDebut) {
         Optional<FileAttente> opt = fileAttenteRepo
                 .findFirstEnAttenteByServiceAndCreneau(serviceId, heureDebut);
@@ -106,7 +100,6 @@ public class ReservationService {
         });
     }
 
-    // ── toResponse ───────────────────────────────────────────────────────────
     private ReservationResponse toResponse(Reservation r) {
         ReservationResponse res = new ReservationResponse();
         res.setId(r.getId());
@@ -129,7 +122,6 @@ public class ReservationService {
         return res;
     }
 
-    // ── GET ALL ──────────────────────────────────────────────────────────────
     public List<ReservationResponse> getAll() {
         UserDetailsImpl ud = getCurrentUserDetails();
         boolean isSuperAdmin = isSuperAdmin(ud);
@@ -162,7 +154,6 @@ public class ReservationService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    // ── CREATE ───────────────────────────────────────────────────────────────
     public ReservationResponse create(CreateReservationRequest req) {
         validerDisponibilite(req.getServiceId(), req.getHeureDebut());
 
@@ -179,14 +170,12 @@ public class ReservationService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Client introuvable"));
 
-        // Vérifier chevauchement pour ce client sur ce service
         boolean overlap = reservationRepo.hasClientOverlap(
                 client.getId(), service.getId(), req.getHeureDebut(), heureFin, null);
         if (overlap)
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Ce client a déjà une réservation qui chevauche ce créneau pour ce service.");
 
-        // SUPER_ADMIN → entreprise déduite du service choisi
         Entreprise ent = getCurrentEntreprise();
         if (ent == null) ent = service.getEntreprise();
 
@@ -253,7 +242,6 @@ public class ReservationService {
                 r.setPrixTotal(calculerPrix(service, config, r.getNombrePersonnes()));
             }
             case "FILE_ATTENTE_PURE" -> {
-                // File d'attente : vérifier chevauchement global du service
                 if (reservationRepo.hasServiceOverlap(service.getId(), req.getHeureDebut(), heureFin, null))
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
                             "Ce créneau est déjà occupé pour ce service.");
@@ -276,7 +264,6 @@ public class ReservationService {
         return toResponse(reservationRepo.save(r));
     }
 
-    // ── UPDATE ───────────────────────────────────────────────────────────────
     public ReservationResponse update(Long id, CreateReservationRequest req) {
         Reservation r = reservationRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -297,14 +284,12 @@ public class ReservationService {
         LocalDateTime heureFin = req.getHeureDebut().plusMinutes(duree);
         String typeService = config != null ? config.getTypeService().name() : "";
 
-        // Vérifier chevauchement pour ce client (en excluant la réservation courante)
         boolean overlap = reservationRepo.hasClientOverlap(
                 r.getClient().getId(), service.getId(), req.getHeureDebut(), heureFin, id);
         if (overlap)
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Ce client a déjà une réservation qui chevauche ce créneau pour ce service.");
 
-        // Vérifier chevauchement global du service pour les types sans ressource/employé
         if ("FILE_ATTENTE_PURE".equals(typeService) ||
                 ("EMPLOYE_DEDIE".equals(typeService) && req.getEmployeId() == null)) {
             if (reservationRepo.hasServiceOverlap(service.getId(), req.getHeureDebut(), heureFin, id))
@@ -333,12 +318,10 @@ public class ReservationService {
         return toResponse(reservationRepo.save(r));
     }
 
-    // ── ANNULER PAR CLIENT ────────────────────────────────────────────────────
     public ReservationResponse annulerParClient(Long id) {
         Reservation r = reservationRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Réservation introuvable"));
         UserDetailsImpl ud = getCurrentUserDetails();
-        // Vérifier que c'est bien la réservation du client connecté
         boolean isClient = ud.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CLIENT"));
         if (isClient) {
             Client client = clientRepo.findByUserId(ud.getId())
@@ -352,7 +335,6 @@ public class ReservationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible d'annuler une réservation terminée.");
         r.setStatut(StatutReservation.ANNULEE);
         reservationRepo.save(r);
-        // Libérer ressource si applicable
         if (r.getRessource() != null) {
             ConfigService config = r.getService().getConfig();
             if (config != null && config.getTypeService() == TypeService.RESSOURCE_PARTAGEE)
@@ -361,7 +343,6 @@ public class ReservationService {
         return toResponse(r);
     }
 
-    // ── UPDATE STATUT ────────────────────────────────────────────────────────
     public ReservationResponse updateStatut(Long id, String statut) {
         Reservation r = reservationRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -381,7 +362,6 @@ public class ReservationService {
         return toResponse(r);
     }
 
-    // ── DELETE ───────────────────────────────────────────────────────────────
     public void delete(Long id) {
         Reservation r = reservationRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -392,7 +372,6 @@ public class ReservationService {
                 notifierPremierEnFile(r.getService().getId(), r.getHeureDebut());
             }
         }
-        // Supprimer d'abord les entrées de file d'attente liées
         fileAttenteRepo.deleteByReservationId(id);
         reservationRepo.deleteById(id);
     }

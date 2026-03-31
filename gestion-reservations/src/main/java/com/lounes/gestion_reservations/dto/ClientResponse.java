@@ -10,9 +10,8 @@ public class ClientResponse {
     private String numtel;
     private Boolean archived;
     private String createdBy;
-    private List<EntrepriseInfo> entreprises; // NOUVEAU
+    private List<EntrepriseInfo> entreprises;
 
-    // Constructeur existant (sans entreprises — pour compatibilité)
     public ClientResponse(Long id, String nom, String prenom, String email,
                           String numtel, Boolean archived, String createdBy) {
         this.id = id;
@@ -24,7 +23,6 @@ public class ClientResponse {
         this.createdBy = createdBy;
     }
 
-    // Sous-classe pour les infos entreprise
     public static class EntrepriseInfo {
         private Long id;
         private String nom;
@@ -41,7 +39,7 @@ public class ClientResponse {
         public String getSecteur() { return secteur; }
     }
 
-    // Getters & Setters
+
     public Long getId() { return id; }
     public String getNom() { return nom; }
     public String getPrenom() { return prenom; }

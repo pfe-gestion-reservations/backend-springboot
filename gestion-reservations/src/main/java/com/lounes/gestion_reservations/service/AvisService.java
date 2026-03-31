@@ -22,7 +22,6 @@ public class AvisService {
     @Autowired private ServiceRepository serviceRepository;
     @Autowired private EntrepriseRepository entrepriseRepository;
 
-    // ✅ CLIENT — laisser un avis sur une réservation terminée
     public AvisResponse create(AvisRequest request, Long userId) {
         Client client = clientRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Client non trouvé"));
@@ -50,11 +49,6 @@ public class AvisService {
         return toResponse(avisRepository.save(avis));
     }
 
-    // ✅ Retourne les avis selon le rôle de l'utilisateur connecté :
-    //    - SUPER_ADMIN : tous les avis
-    //    - GERANT      : avis de son entreprise
-    //    - EMPLOYE     : avis de l'entreprise à laquelle il appartient
-    //    - CLIENT      : avis liés à ses réservations
     public List<AvisResponse> getAvisForCurrentUser() {
         UserDetailsImpl ud = (UserDetailsImpl) SecurityContextHolder
                 .getContext().getAuthentication().getPrincipal();
@@ -85,14 +79,12 @@ public class AvisService {
                     .map(this::toResponse).collect(Collectors.toList());
         }
 
-        // CLIENT — avis liés à ses propres réservations
         Client client = clientRepository.findByUserId(ud.getId())
                 .orElseThrow(() -> new RuntimeException("Client non trouvé"));
         return avisRepository.findByClientId(client.getId()).stream()
                 .map(this::toResponse).collect(Collectors.toList());
     }
 
-    // ✅ Tous les utilisateurs connectés peuvent voir les avis d'un service
     public List<AvisResponse> getByService(Long serviceId) {
         ServiceEntity service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new RuntimeException("Service non trouvé"));

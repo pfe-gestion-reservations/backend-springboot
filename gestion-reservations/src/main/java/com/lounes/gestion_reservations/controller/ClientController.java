@@ -21,7 +21,7 @@ public class ClientController {
     @Autowired
     private ClientService clientService;
 
-    // ─── MON PROFIL CLIENT ────────────────────────────────────────────────────
+    //recuperer le profil du client connecté
     @GetMapping("/me")
     @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<ClientResponse> getMyProfile(
@@ -29,7 +29,7 @@ public class ClientController {
         return ResponseEntity.ok(clientService.getByUserId(userDetails.getId()));
     }
 
-    // ─── LOOKUP PAR TÉLÉPHONE ─────────────────────────────────────────────────
+    //retrouver un client à partir de son num tel
     @GetMapping("/by-telephone/{numtel}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE')")
     public ResponseEntity<Map<String, Object>> findByTelephone(
@@ -37,7 +37,7 @@ public class ClientController {
         return ResponseEntity.ok(clientService.findByTelephone(numtel));
     }
 
-    // ─── CHECK EMAIL (par @RequestParam pour éviter pb encodage avec @) ───────
+    //verifier si l email existe deja ou pas
     @GetMapping("/check-email")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE')")
     public ResponseEntity<?> checkEmail(
@@ -45,7 +45,7 @@ public class ClientController {
         return ResponseEntity.ok(clientService.checkEmail(email));
     }
 
-    // ─── ASSOCIER UN CLIENT EXISTANT À UNE ENTREPRISE ────────────────────────
+    //associer un client existant a une entrep
     @PostMapping("/{clientId}/entreprise/{entrepriseId}/associer")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'GERANT')")
     public ResponseEntity<?> associerAEntreprise(
@@ -54,7 +54,7 @@ public class ClientController {
         return clientService.associerAEntreprise(clientId, entrepriseId);
     }
 
-    // ─── CRUD ─────────────────────────────────────────────────────────────────
+    //crud client
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE')")
     public ResponseEntity<List<ClientResponse>> getAll() {
@@ -100,6 +100,7 @@ public class ClientController {
         return ResponseEntity.noContent().build();
     }
 
+    //desarchiver et associer en mm temps
     @PostMapping("/{id}/desarchiver-associer")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE')")
     public ResponseEntity<?> desarchiverEtAssocier(@PathVariable Long id,
@@ -107,6 +108,7 @@ public class ClientController {
         return clientService.desarchiverEtAssocier(id, entrepriseId);
     }
 
+    //dissocier le client de l entrep
     @DeleteMapping("/{clientId}/entreprise/{entrepriseId}/dissocier")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE')")
     public ResponseEntity<?> dissocierDeEntreprise(

@@ -14,20 +14,20 @@ public class ConfigServiceController {
 
     @Autowired private ConfigServiceService configServiceService;
 
-    // Récupérer la config d'un service
+    //recuperer la config d un service
     @GetMapping("/service/{serviceId}")
     public ResponseEntity<ConfigServiceResponse> getByService(@PathVariable Long serviceId) {
         return ResponseEntity.ok(configServiceService.getByService(serviceId));
     }
 
-    // Créer ou mettre à jour la config d'un service (upsert)
+    //creer ou maj d un config service
     @PostMapping
     @PreAuthorize("hasAnyRole('GERANT','SUPER_ADMIN')")
     public ResponseEntity<ConfigServiceResponse> save(@RequestBody ConfigServiceRequest request) {
         return ResponseEntity.ok(configServiceService.save(request));
     }
 
-    // Supprimer la config d'un service
+    //supprimer le config d un service
     @DeleteMapping("/service/{serviceId}")
     @PreAuthorize("hasAnyRole('GERANT','SUPER_ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long serviceId) {

@@ -94,7 +94,6 @@ public class ClientService {
         return resp;
     }
 
-    // ─── CHECK TÉLÉPHONE ──────────────────────────────────────────────────────
     public Map<String, Object> findByTelephone(String numtel) {
         Optional<Client> clientOpt = clientRepository.findByNumtel(numtel);
         if (clientOpt.isEmpty()) return Map.of("status", "NOT_FOUND");
@@ -115,7 +114,7 @@ public class ClientService {
                 "numtel", numtel);
     }
 
-    // ─── CHECK EMAIL ──────────────────────────────────────────────────────────
+
     public Map<String, Object> checkEmail(String email) {
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) return Map.of("status", "NOT_FOUND");
@@ -143,7 +142,6 @@ public class ClientService {
         }
     }
 
-    // ─── ASSOCIER UN CLIENT EXISTANT À UNE ENTREPRISE ────────────────────────
     public ResponseEntity<?> associerAEntreprise(Long clientId, Long entrepriseId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
@@ -169,7 +167,6 @@ public class ClientService {
                 "client", toResponse(saved)));
     }
 
-    // ─── DÉSARCHIVER ET ASSOCIER ──────────────────────────────────────────────
     public ResponseEntity<?> desarchiverEtAssocier(Long clientId, Long entrepriseId) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Client non trouvé"));
@@ -183,7 +180,6 @@ public class ClientService {
         return ResponseEntity.ok(toResponse(clientRepository.save(client)));
     }
 
-    // ─── CRUD ─────────────────────────────────────────────────────────────────
     public List<ClientResponse> getAll() {
         User currentUser = getCurrentUser();
         if (isSuperAdmin(currentUser)) {
@@ -264,7 +260,7 @@ public class ClientService {
         return toResponse(clientRepository.save(client));
     }
 
-    // ─── ARCHIVER / DÉSARCHIVER ───────────────────────────────────────────────
+
     @Transactional
     public ClientResponse setArchived(Long id, boolean archived) {
         Client client = clientRepository.findById(id)
@@ -275,7 +271,7 @@ public class ClientService {
         userRepository.save(client.getUser());
 
         if (archived) {
-            // Annuler toutes les réservations actives
+
             reservationRepository.findByClientId(id).stream()
                     .filter(r -> r.getStatut() == StatutReservation.EN_ATTENTE
                             || r.getStatut() == StatutReservation.CONFIRMEE
@@ -285,7 +281,7 @@ public class ClientService {
                         reservationRepository.save(r);
                     });
 
-            // Annuler toutes les entrées actives en file d'attente
+
             fileAttenteRepository.findByClientId(id).stream()
                     .filter(f -> f.getStatut() == StatutFileAttente.EN_ATTENTE
                             || f.getStatut() == StatutFileAttente.APPELE)
@@ -294,14 +290,13 @@ public class ClientService {
                         fileAttenteRepository.save(f);
                     });
 
-            // Dissocier de toutes les entreprises
+
             new ArrayList<>(client.getEntreprises()).forEach(client::removeEntreprise);
         }
 
         return toResponse(clientRepository.save(client));
     }
 
-    // ─── DISSOCIER D'UNE ENTREPRISE ───────────────────────────────────────────
     @Transactional
     public ResponseEntity<?> dissocierDeEntreprise(Long clientId, Long entrepriseId) {
         Client client = clientRepository.findById(clientId)
@@ -325,7 +320,7 @@ public class ClientService {
         return ResponseEntity.ok(Map.of("message", "Client retiré de " + entreprise.getNom()));
     }
 
-    // ─── SUPPRIMER DÉFINITIVEMENT ─────────────────────────────────────────────
+
     @Transactional
     public void supprimerDefinitivement(Long id) {
         Client client = clientRepository.findById(id)

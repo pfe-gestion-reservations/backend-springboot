@@ -21,14 +21,14 @@ import java.util.List;
 public class FileAttenteController {
 
     @Autowired private FileAttenteService fileAttenteService;
-
+    //ajouter dans la file
     @PostMapping
-    @PreAuthorize("hasAnyRole('CLIENT','EMPLOYE','GERANT','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('EMPLOYE','GERANT','SUPER_ADMIN')")
     public ResponseEntity<FileAttenteResponse> ajouter(
             @Valid @RequestBody FileAttenteRequest request) {
         return ResponseEntity.ok(fileAttenteService.ajouter(request));
     }
-
+    //recuperer toute la file d attente
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE')")
     public ResponseEntity<List<FileAttenteResponse>> getAll(
@@ -36,7 +36,7 @@ public class FileAttenteController {
         return ResponseEntity.ok(fileAttenteService.getAll(userDetails));
     }
 
-    // File d'attente par service + créneau (RESSOURCE_PARTAGEE)
+    //recuperer la file d att par service
     @GetMapping("/by-service/{serviceId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE')")
     public ResponseEntity<List<FileAttenteResponse>> getByServiceEtCreneau(
@@ -45,7 +45,7 @@ public class FileAttenteController {
         return ResponseEntity.ok(fileAttenteService.getByServiceEtCreneau(serviceId, heureDebut));
     }
 
-    // Client accepte la proposition
+ /*   // Client accepte la proposition
     @PutMapping("/{id}/accepter")
     @PreAuthorize("hasRole('CLIENT')")
     public ResponseEntity<FileAttenteResponse> accepter(
@@ -62,7 +62,9 @@ public class FileAttenteController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(fileAttenteService.refuser(id, userDetails.getId()));
     }
+*/
 
+    //appeler client
     @PutMapping("/{id}/appeler")
     @PreAuthorize("hasAnyRole('EMPLOYE','GERANT','SUPER_ADMIN')")
     public ResponseEntity<FileAttenteResponse> appeler(
@@ -70,7 +72,7 @@ public class FileAttenteController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(fileAttenteService.appeler(id, userDetails.getId()));
     }
-
+    //demarrer reservation
     @PutMapping("/{id}/demarrer")
     @PreAuthorize("hasAnyRole('EMPLOYE','GERANT','SUPER_ADMIN')")
     public ResponseEntity<FileAttenteResponse> demarrer(
@@ -78,7 +80,7 @@ public class FileAttenteController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(fileAttenteService.demarrer(id, userDetails.getId()));
     }
-
+    //terminer reservation
     @PutMapping("/{id}/terminer")
     @PreAuthorize("hasAnyRole('EMPLOYE','GERANT','SUPER_ADMIN')")
     public ResponseEntity<FileAttenteResponse> terminer(
@@ -86,7 +88,7 @@ public class FileAttenteController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(fileAttenteService.terminer(id, userDetails.getId()));
     }
-
+    //annuler reservation
     @PutMapping("/{id}/annuler")
     @PreAuthorize("hasAnyRole('EMPLOYE','GERANT','SUPER_ADMIN','CLIENT')")
     public ResponseEntity<FileAttenteResponse> annuler(
@@ -94,7 +96,7 @@ public class FileAttenteController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(fileAttenteService.annuler(id, userDetails.getId()));
     }
-
+    //force annulation par admin
     @PutMapping("/{id}/annuler/admin")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT')")
     public ResponseEntity<FileAttenteResponse> annulerAdmin(@PathVariable Long id) {

@@ -82,16 +82,12 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ OPTIONS preflight — toujours permis (CORS)
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                        // Publics — auth
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/signup").permitAll()
-                        // Publics — consultation (client non connecté)
                         .requestMatchers("/api/creneaux").permitAll()
                         .requestMatchers("/api/ressources/service/**").permitAll()
                         .requestMatchers("/api/config-services/service/**").permitAll()
-                        // Tout le reste nécessite authentification
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);

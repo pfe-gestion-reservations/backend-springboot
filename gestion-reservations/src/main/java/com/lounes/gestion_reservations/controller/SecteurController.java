@@ -17,32 +17,32 @@ import java.util.List;
 public class SecteurController {
 
     @Autowired private SecteurService secteurService;
-
+    //recuperer tous les secteurs
     @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<SecteurResponse>> getAll() {
         return ResponseEntity.ok(secteurService.getAll());
     }
-
+    //recuperer un secteur precis
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<SecteurResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(secteurService.getById(id));
     }
-
+    //creer un secteur
     @PostMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<SecteurResponse> create(@Valid @RequestBody SecteurRequest request) {
         return ResponseEntity.ok(secteurService.create(request));
     }
-
+    //maj un secteur
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<SecteurResponse> update(@PathVariable Long id,
                                                   @Valid @RequestBody SecteurRequest request) {
         return ResponseEntity.ok(secteurService.update(id, request));
     }
-
+    //supprimer un secteur
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id) {

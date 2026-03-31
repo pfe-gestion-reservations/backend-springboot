@@ -50,6 +50,5 @@ public class UserDetailsImpl implements UserDetails {
     @Override public boolean isAccountNonLocked() { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }
 
-    // Compte actif = NON archivé
     @Override public boolean isEnabled() { return !archived; }
 }

@@ -21,7 +21,6 @@ public class JwtUtils {
     @Value("${app.jwt.expiration}")
     private int jwtExpirationMs;
 
-    // ✅ Générer JWT avec rôles
     public String generateJwtToken(Authentication authentication) {
 
         UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
@@ -39,17 +38,14 @@ public class JwtUtils {
                 .compact();
     }
 
-    // ✅ Extraire email
     public String getEmailFromToken(String token) {
         return getClaims(token).getSubject();
     }
 
-    // ✅ Extraire rôles
     public List<String> getRolesFromToken(String token) {
         return getClaims(token).get("roles", List.class);
     }
 
-    // ✅ Valider token
     public boolean validateJwtToken(String token) {
         try {
             getClaims(token);
@@ -59,8 +55,6 @@ public class JwtUtils {
         }
         return false;
     }
-
-    // ===== Utils =====
 
     private Claims getClaims(String token) {
         return Jwts.parserBuilder()

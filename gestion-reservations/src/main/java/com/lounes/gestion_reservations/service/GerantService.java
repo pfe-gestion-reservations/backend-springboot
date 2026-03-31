@@ -53,11 +53,9 @@ public class GerantService {
         return toResponse(user);
     }
 
-    // Vérifier email avant création d'un gérant (mêmes règles que l'employé)
     public EmployeCheckResponse checkEmail(String email) {
         Optional<User> userOpt = userRepository.findByEmail(email);
 
-        // Aucun compte → nouveau
         if (userOpt.isEmpty())
             return new EmployeCheckResponse("NOUVEAU",
                     "Aucun compte trouvé. Vous pouvez créer un nouveau gérant.",
@@ -65,25 +63,21 @@ public class GerantService {
 
         User user = userOpt.get();
 
-        // Vérifier si ce user est GÉRANT
         boolean isGerant = user.getRoles().stream()
                 .anyMatch(r -> r.getName() == ERole.ROLE_GERANT);
 
         if (!isGerant) {
-            // Email utilisé par un autre rôle (client, employé, super admin...)
             return new EmployeCheckResponse("EMAIL_OTHER_ROLE",
                     "Cet email est déjà utilisé par un autre type de compte. Veuillez choisir un autre email.",
                     null, null, null, email);
         }
 
-        // Gérant archivé → proposer désarchivage
         if (Boolean.TRUE.equals(user.getArchived())) {
             return new EmployeCheckResponse("LIBRE",
                     "Ce gérant est archivé. Voulez-vous le désarchiver ?",
                     user.getId(), user.getNom(), user.getPrenom(), user.getEmail());
         }
 
-        // Gérant actif avec entreprise → occupé
         Optional<Entreprise> entrepriseOpt = entrepriseRepository.findByGerantId(user.getId());
         if (entrepriseOpt.isPresent()) {
             return new EmployeCheckResponse("OCCUPE",
@@ -91,7 +85,6 @@ public class GerantService {
                     user.getId(), user.getNom(), user.getPrenom(), user.getEmail());
         }
 
-        // Gérant actif sans entreprise → compte existant, bloquer
         return new EmployeCheckResponse("OCCUPE",
                 "Ce mail a déjà un compte gérant actif dans le système.",
                 user.getId(), user.getNom(), user.getPrenom(), user.getEmail());
@@ -118,7 +111,6 @@ public class GerantService {
         return toResponse(user);
     }
 
-    // Archiver un gérant — remplaçantId obligatoire si le gérant a une entreprise
     public GerantResponse archiver(Long id, Long remplacantId) {
         User gerant = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gérant introuvable"));
@@ -169,7 +161,6 @@ public class GerantService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Gérant introuvable"));
 
-        // Vérifier si le gérant est encore assigné à une entreprise
         Optional<Entreprise> entrepriseOpt = entrepriseRepository.findByGerantId(id);
         if (entrepriseOpt.isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,

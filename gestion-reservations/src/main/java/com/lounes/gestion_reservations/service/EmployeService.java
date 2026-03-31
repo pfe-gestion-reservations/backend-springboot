@@ -39,21 +39,17 @@ public class EmployeService {
                         "Aucune entreprise trouvée pour ce gérant"));
     }
 
-    // ─── CHECK EMAIL : recherche directe dans la table employe ──────────────
-    // Retourne statut FREE / BUSY / ALREADY_IN_THIS_COMPANY / NOT_FOUND
+
     public Map<String, Object> checkEmail(String email, Long entrepriseId) {
-        // Recherche DIRECTE dans la table employe (pas users)
         Optional<Employe> empOpt = employeRepository.findByUserEmail(email);
 
         if (empOpt.isEmpty()) {
-            // Vérifier si l'email est utilisé par un autre rôle (SUPER_ADMIN, GÉRANT, CLIENT...)
             if (userRepository.existsByEmail(email)) {
                 return Map.of(
                         "status", "EMAIL_OTHER_ROLE",
                         "message", "Cet email est déjà utilisé par un compte d'un autre rôle."
                 );
             }
-            // Aucun compte → formulaire création
             return Map.of("status", "NOT_FOUND");
         }
 
@@ -68,7 +64,6 @@ public class EmployeService {
         result.put("specialite", emp.getSpecialite() != null ? emp.getSpecialite() : "");
         result.put("archived", user.getArchived());
 
-        // ── Archivé → priorité absolue, peu importe l'entreprise ──────────────
         if (Boolean.TRUE.equals(user.getArchived())) {
             result.put("status", "FREE");  // front détecte archived=true → result-archived
             return result;
@@ -86,7 +81,6 @@ public class EmployeService {
         return result;
     }
 
-    // ─── RATTACHER un employé existant (LIBRE) à une entreprise ──────────────
     @Transactional
     public Map<String, Object> rattacher(Long userId, Long entrepriseId, String specialite) {
         User user = userRepository.findById(userId)
@@ -108,7 +102,6 @@ public class EmployeService {
     }
 
 
-    // ─── RATTACHER PAR EMAIL (appelé depuis POST /rattacher) ──────────────────
     @Transactional
     public Map<String, Object> rattacherByEmail(String email, Long entrepriseId, String specialite) {
         Employe emp = employeRepository.findByUserEmail(email)
@@ -138,22 +131,18 @@ public class EmployeService {
         return Map.of("message", "Employé rattaché avec succès", "employe", toResponse(saved));
     }
 
-    // ─── CREATE : crée ou associe selon l'état ────────────────────────────────
+
     public ResponseEntity<?> create(EmployeRequest request) {
         User currentUser = getCurrentUser();
 
-        // Déterminer l'entreprise cible
         Entreprise entreprise;
         if (request.getEntrepriseId() != null) {
-            // Super Admin fournit l'ID entreprise
             entreprise = entrepriseRepository.findById(request.getEntrepriseId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise non trouvée"));
         } else {
-            // Gérant → son entreprise
             entreprise = getEntrepriseOfGerant(currentUser);
         }
 
-        // Recherche DIRECTE dans la table employe par email
         Optional<Employe> existingEmp = employeRepository.findByUserEmail(request.getEmail());
 
         if (existingEmp.isPresent()) {
@@ -176,7 +165,6 @@ public class EmployeService {
             }
         }
 
-        // Aucun enregistrement dans employe → vérifier si email utilisé ailleurs
         if (userRepository.existsByEmail(request.getEmail())) {
             return ResponseEntity.badRequest().body(Map.of("error", "EMAIL_EXISTS_OTHER_ROLE",
                     "message", "Cet email est utilisé par un autre type de compte."));
@@ -210,7 +198,6 @@ public class EmployeService {
         boolean isSuperAdmin = currentUser.getRoles().stream()
                 .anyMatch(r -> r.getName() == ERole.ROLE_SUPER_ADMIN);
         if (isSuperAdmin) {
-            // SA sans filtre → uniquement les employés rattachés à une entreprise
             return employeRepository.findAll().stream()
                     .map(this::toResponse).collect(Collectors.toList());
         }
@@ -261,26 +248,13 @@ public class EmployeService {
         return toResponse(employeRepository.save(employe));
     }
 
-    public void desactiver(Long id) {
-        Employe employe = employeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé"));
-        employe.getUser().setArchived(false);
-        userRepository.save(employe.getUser());
-    }
-
-    public void reactiver(Long id) {
-        Employe employe = employeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé"));
-        employe.getUser().setArchived(true);
-        userRepository.save(employe.getUser());
-    }
 
     @Transactional
     public void archiver(Long id) {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé"));
         employe.getUser().setArchived(true);
-        employe.setEntreprise(null); // ← libère l'employé
+        employe.setEntreprise(null);
         userRepository.save(employe.getUser());
         employeRepository.save(employe);
     }
@@ -294,14 +268,12 @@ public class EmployeService {
         employeRepository.save(employe);
     }
 
-    // ─── DÉSARCHIVER + RATTACHER à l'entreprise du gérant connecté ──────────
     @Transactional
     public void desarchiverEtRattacher(Long id) {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé"));
         employe.getUser().setArchived(false);
         userRepository.save(employe.getUser());
-        // Gérant → rattache à son entreprise | Super admin → désarchive seulement
         User currentUser = getCurrentUser();
         boolean isSuperAdmin = currentUser.getRoles().stream()
                 .anyMatch(r -> r.getName() == ERole.ROLE_SUPER_ADMIN);
@@ -312,26 +284,21 @@ public class EmployeService {
         employeRepository.save(employe);
     }
 
-    // ─── SUPPRESSION DÉFINITIVE ──────────────────────────────────────────────
     @Transactional
     public void supprimerDefinitivement(Long id) {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé"));
 
         List<String> relations = new ArrayList<>();
-
-        // 1. Rattaché à une entreprise ?
         if (employe.getEntreprise() != null) {
             relations.add("entreprise \"" + employe.getEntreprise().getNom() + "\"");
         }
 
-        // 2. Réservations liées ?
         long nbReservations = reservationRepository.findByEmployeId(id).size();
         if (nbReservations > 0) {
             relations.add(nbReservations + " réservation(s)");
         }
 
-        // 3. File d'attente liée ?
         long nbFileAttente = fileAttenteRepository.findByEmployeAndStatutNot(
                 employe, com.lounes.gestion_reservations.model.StatutFileAttente.TERMINE).size();
         if (nbFileAttente > 0) {
@@ -344,7 +311,6 @@ public class EmployeService {
                     "Cet employé est lié à : " + detail + ". Supprimez ces relations avant de supprimer l'employé.");
         }
 
-        // Aucune relation → suppression complète
         Long userId = employe.getUser().getId();
         employeRepository.delete(employe);
         userRepository.deleteById(userId);

@@ -15,7 +15,7 @@ public class Disponibilite {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id", nullable = false)
-    private ServiceEntity service;   // ← com.lounes... pas com.example.demo
+    private ServiceEntity service;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

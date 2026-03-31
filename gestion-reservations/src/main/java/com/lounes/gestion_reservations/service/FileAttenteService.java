@@ -41,7 +41,6 @@ public class FileAttenteService {
         };
     }
 
-    // ── AJOUTER ──────────────────────────────────────────────────────────────
     public FileAttenteResponse ajouter(FileAttenteRequest request) {
         Client client = clientRepository.findById(request.getClientId())
                 .orElseThrow(() -> new RuntimeException("Client non trouvé"));
@@ -57,10 +56,7 @@ public class FileAttenteService {
         fa.setHeureArrivee(LocalDateTime.now());
         fa.setStatut(StatutFileAttente.EN_ATTENTE);
 
-        // ── Tous les types : réservation obligatoire ──
-        // Pour RESSOURCE_PARTAGEE, heureDebut vient de la réservation ou de la requête
         if (config.getTypeService() == TypeService.RESSOURCE_PARTAGEE) {
-            // heureDebut peut venir de la requête ou de la réservation
             if (request.getReservationId() != null) {
                 Reservation reservation = reservationRepository.findById(request.getReservationId())
                         .orElseThrow(() -> new RuntimeException("Réservation non trouvée"));
@@ -78,7 +74,6 @@ public class FileAttenteService {
             }
             fa.setEntreprise(service.getEntreprise());
         }
-        // ── Tous les autres types : réservation obligatoire, employeId optionnel ──
         else {
             if (request.getReservationId() == null)
                 throw new RuntimeException("reservationId obligatoire");
@@ -86,14 +81,12 @@ public class FileAttenteService {
                     .orElseThrow(() -> new RuntimeException("Réservation non trouvée"));
             if (!reservation.getClient().getId().equals(client.getId()))
                 throw new RuntimeException("Cette réservation n'appartient pas à ce client !");
-            // Vérifier que la réservation n'est pas déjà en file active
             if (fileAttenteRepository.existsByReservationIdAndStatutNot(reservation.getId(), StatutFileAttente.ANNULE))
                 throw new RuntimeException("Cette réservation est déjà inscrite en file d'attente.");
 
             fa.setReservation(reservation);
             fa.setEntreprise(service.getEntreprise());
 
-            // Employé optionnel — on prend celui de la réservation s'il existe
             if (reservation.getEmploye() != null) {
                 fa.setEmploye(reservation.getEmploye());
             }
@@ -102,7 +95,6 @@ public class FileAttenteService {
         return toResponse(fileAttenteRepository.save(fa));
     }
 
-    // ── NOTIFIER LE PREMIER EN FILE ───────────────────────────────────────────
     public void notifierPremierEnFile(Long serviceId, LocalDateTime heureDebut) {
         Optional<FileAttente> opt = fileAttenteRepository
                 .findFirstEnAttenteByServiceAndCreneau(serviceId, heureDebut);
@@ -113,33 +105,6 @@ public class FileAttenteService {
         }
     }
 
-    // ── ACCEPTER ─────────────────────────────────────────────────────────────
-    public FileAttenteResponse accepter(Long id, Long clientUserId) {
-        FileAttente fa = fileAttenteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Entrée non trouvée"));
-        if (!fa.getClient().getUser().getId().equals(clientUserId))
-            throw new RuntimeException("Vous ne pouvez pas modifier cette entrée !");
-        if (fa.getStatut() != StatutFileAttente.APPELE)
-            throw new RuntimeException("Aucune ressource proposée pour cette entrée !");
-        fa.setStatut(StatutFileAttente.TERMINE);
-        return toResponse(fileAttenteRepository.save(fa));
-    }
-
-    // ── REFUSER ──────────────────────────────────────────────────────────────
-    public FileAttenteResponse refuser(Long id, Long clientUserId) {
-        FileAttente fa = fileAttenteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Entrée non trouvée"));
-        if (!fa.getClient().getUser().getId().equals(clientUserId))
-            throw new RuntimeException("Vous ne pouvez pas modifier cette entrée !");
-        if (fa.getStatut() != StatutFileAttente.APPELE)
-            throw new RuntimeException("Aucune ressource proposée pour cette entrée !");
-        fa.setStatut(StatutFileAttente.ANNULE);
-        fileAttenteRepository.save(fa);
-        notifierPremierEnFile(fa.getService().getId(), fa.getHeureDebut());
-        return toResponse(fa);
-    }
-
-    // ── GET ALL ───────────────────────────────────────────────────────────────
     public List<FileAttenteResponse> getAll(UserDetailsImpl userDetails) {
         boolean isGerant = userDetails.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_GERANT"));
@@ -154,7 +119,6 @@ public class FileAttenteService {
                 .stream().sorted(TRI_FILE).map(this::toResponse).collect(Collectors.toList());
     }
 
-    // ── GET BY EMPLOYE ────────────────────────────────────────────────────────
     public List<FileAttenteResponse> getByEmployeUserId(Long userId) {
         Employe employe = employeRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Employé non trouvé"));
@@ -162,7 +126,6 @@ public class FileAttenteService {
                 .stream().sorted(TRI_FILE).map(this::toResponse).collect(Collectors.toList());
     }
 
-    // ── GET FILE PAR SERVICE + CRÉNEAU ───────────────────────────────────────
     public List<FileAttenteResponse> getByServiceEtCreneau(Long serviceId, LocalDateTime heureDebut) {
         return fileAttenteRepository
                 .findByServiceIdAndHeureDebutAndStatutOrderByHeureArriveeAsc(
@@ -170,7 +133,6 @@ public class FileAttenteService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    // ── APPELER ───────────────────────────────────────────────────────────────
     public FileAttenteResponse appeler(Long id, Long userId) {
         FileAttente fa = getAndVerify(id, userId);
         if (fa.getStatut() != StatutFileAttente.EN_ATTENTE)
@@ -179,7 +141,6 @@ public class FileAttenteService {
         return toResponse(fileAttenteRepository.save(fa));
     }
 
-    // ── DÉMARRER ──────────────────────────────────────────────────────────────
     public FileAttenteResponse demarrer(Long id, Long userId) {
         FileAttente fa = getAndVerify(id, userId);
         if (fa.getStatut() != StatutFileAttente.APPELE)
@@ -192,7 +153,6 @@ public class FileAttenteService {
         return toResponse(fileAttenteRepository.save(fa));
     }
 
-    // ── TERMINER ──────────────────────────────────────────────────────────────
     public FileAttenteResponse terminer(Long id, Long userId) {
         FileAttente fa = getAndVerify(id, userId);
         if (fa.getStatut() != StatutFileAttente.EN_COURS)
@@ -205,7 +165,6 @@ public class FileAttenteService {
         return toResponse(fileAttenteRepository.save(fa));
     }
 
-    // ── ANNULER ───────────────────────────────────────────────────────────────
     public FileAttenteResponse annuler(Long id, Long userId) {
         FileAttente fa = getAndVerify(id, userId);
         if (fa.getStatut() == StatutFileAttente.TERMINE)
@@ -218,7 +177,6 @@ public class FileAttenteService {
         return toResponse(fileAttenteRepository.save(fa));
     }
 
-    // ── ANNULER ADMIN ─────────────────────────────────────────────────────────
     public FileAttenteResponse annulerAdmin(Long id) {
         FileAttente fa = fileAttenteRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Entrée non trouvée"));
@@ -232,12 +190,9 @@ public class FileAttenteService {
         return toResponse(fileAttenteRepository.save(fa));
     }
 
-    // ── Helper : vérification accès (employé optionnel pour SA/GERANT) ────────
     private FileAttente getAndVerify(Long fileId, Long userId) {
         FileAttente fa = fileAttenteRepository.findById(fileId)
                 .orElseThrow(() -> new RuntimeException("Entrée non trouvée"));
-        // Si la file a un employé assigné, vérifier que l'utilisateur est bien cet employé
-        // (sauf si c'est un SA ou GERANT qui n'a pas d'entrée employé)
         if (fa.getEmploye() != null) {
             Optional<Employe> employeOpt = employeRepository.findByUserId(userId);
             if (employeOpt.isPresent() && !fa.getEmploye().getId().equals(employeOpt.get().getId()))
@@ -246,7 +201,7 @@ public class FileAttenteService {
         return fa;
     }
 
-    // ── toResponse ────────────────────────────────────────────────────────────
+
     private FileAttenteResponse toResponse(FileAttente fa) {
         return new FileAttenteResponse(
                 fa.getId(),

@@ -7,10 +7,9 @@ public class GerantResponse {
     private String email;
     private Boolean archived;
 
-    // Entreprise associée (null si libre)
-    private Long entrepriseId;
     private String entrepriseNom;
     private String entrepriseAdresse;
+    private Long entrepriseId;
     private String entrepriseTelephone;
     private String entrepriseSecteur;
 

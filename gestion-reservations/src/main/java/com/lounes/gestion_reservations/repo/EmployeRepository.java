@@ -15,6 +15,5 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
     Optional<Employe> findByUserIdAndArchivedFalse(Long userId);
     List<Employe> findAllByUserId(Long userId);
 
-    // Recherche directe dans la table employe par email du user associé
     Optional<Employe> findByUserEmail(String email);
 }

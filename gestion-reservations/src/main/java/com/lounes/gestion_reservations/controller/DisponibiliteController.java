@@ -21,6 +21,7 @@ public class DisponibiliteController {
     @Autowired
     private DisponibiliteService disponibiliteService;
 
+    //creer une disponibilité
     @PostMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT')")
     public ResponseEntity<DisponibiliteResponse> create(
@@ -28,7 +29,7 @@ public class DisponibiliteController {
         return ResponseEntity.ok(disponibiliteService.create(request));
     }
 
-    // ← /employe/{id} remplacé par /service/{serviceId}
+    //recuperer toutes les dispos d un service
     @GetMapping("/service/{serviceId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE','CLIENT')")
     public ResponseEntity<List<DisponibiliteResponse>> getByService(
@@ -36,6 +37,7 @@ public class DisponibiliteController {
         return ResponseEntity.ok(disponibiliteService.getByService(serviceId));
     }
 
+    //maj d une disponibilite
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT')")
     public ResponseEntity<DisponibiliteResponse> update(
@@ -44,6 +46,7 @@ public class DisponibiliteController {
         return ResponseEntity.ok(disponibiliteService.update(id, request));
     }
 
+    //supprimer une dispo soft
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
@@ -51,6 +54,7 @@ public class DisponibiliteController {
         return ResponseEntity.ok("Disponibilité supprimée !");
     }
 
+    //supprimer une dispo hard
     @DeleteMapping("/{id}/force")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT')")
     public ResponseEntity<Void> deleteForce(@PathVariable Long id) {

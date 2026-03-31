@@ -18,9 +18,9 @@ public class ReservationResponse {
     private String serviceNom;
     private Long ressourceId;
     private String ressourceNom;
-    private LocalDateTime heureDebut;  // ← remplace dateHeure
-    private LocalDateTime heureFin;    // ← nouveau
-    private Integer nombrePersonnes;   // ← nouveau
+    private LocalDateTime heureDebut;
+    private LocalDateTime heureFin;
+    private Integer nombrePersonnes;
     private Double prixTotal;
     private String statut;
     private String notes;

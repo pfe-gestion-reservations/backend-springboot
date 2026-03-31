@@ -18,7 +18,7 @@ public class CreneauController {
 
     @Autowired
     private CreneauService creneauService;
-
+    //recuperer les creneaux dispo pour un service a une date donnée
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','GERANT','EMPLOYE','CLIENT')")
     public ResponseEntity<List<CreneauResponse>> getCreneaux(

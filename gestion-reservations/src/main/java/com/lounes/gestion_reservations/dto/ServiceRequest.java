@@ -14,13 +14,13 @@ public class ServiceRequest {
     private Long entrepriseId;
     private String typeService;
 
-    // Config RESSOURCE_PARTAGEE
+    //config ressources partagés
     private Integer capaciteMinPersonnes;
     private Integer capaciteMaxPersonnes;
     private Integer annulationHeures;
     private Integer avanceReservationJours;
 
-    // Ressources inline (RESSOURCE_PARTAGEE uniquement)
+    //ressources partagés uniquement
     private List<RessourceInlineRequest> ressources;
 
     public String getNom()                          { return nom; }

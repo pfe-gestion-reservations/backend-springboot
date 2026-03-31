@@ -16,25 +16,25 @@ public class RessourceController {
 
     @Autowired private RessourceService ressourceService;
 
-    // Toutes les ressources de l'entreprise courante
+    //toutes les ressources
     @GetMapping
     @PreAuthorize("hasAnyRole('GERANT','EMPLOYE','SUPER_ADMIN')")
     public List<RessourceResponse> getAll() {
         return ressourceService.getAll();
     }
 
-    // Ressources d'un service spécifique (utilisé par le client pour choisir terrain/box)
+    //ressources d un service specifique
     @GetMapping("/service/{serviceId}")
     public List<RessourceResponse> getByService(@PathVariable Long serviceId) {
         return ressourceService.getByService(serviceId);
     }
-
+    //creer une ressource
     @PostMapping
     @PreAuthorize("hasAnyRole('GERANT','SUPER_ADMIN')")
     public ResponseEntity<RessourceResponse> create(@RequestBody RessourceRequest request) {
         return ResponseEntity.ok(ressourceService.create(request));
     }
-
+    //maj une ressource
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('GERANT','SUPER_ADMIN')")
     public ResponseEntity<RessourceResponse> update(
@@ -42,13 +42,13 @@ public class RessourceController {
             @RequestBody RessourceRequest request) {
         return ResponseEntity.ok(ressourceService.update(id, request));
     }
-
+    //archiver une ressource
     @PatchMapping("/{id}/archiver")
     @PreAuthorize("hasAnyRole('GERANT','SUPER_ADMIN')")
     public ResponseEntity<RessourceResponse> archiver(@PathVariable Long id) {
         return ResponseEntity.ok(ressourceService.archiver(id));
     }
-
+    //desarchiver une ressource
     @PatchMapping("/{id}/desarchiver")
     @PreAuthorize("hasAnyRole('GERANT','SUPER_ADMIN')")
     public ResponseEntity<RessourceResponse> desarchiver(@PathVariable Long id) {

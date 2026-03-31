@@ -7,8 +7,8 @@ public class EmployeResponse {
     private String email;
     private String specialite;
     private Boolean archived;
-    private Long entrepriseId;      // null si libre
-    private String entrepriseNom;   // null si libre
+    private Long entrepriseId;      //null si libre
+    private String entrepriseNom;
 
     public EmployeResponse(Long id, String nom, String prenom,
                            String email, String specialite, Boolean archived,

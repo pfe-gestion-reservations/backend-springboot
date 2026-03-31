@@ -24,8 +24,7 @@ public class User {
 
     private String nom;
     private String prenom;
-
-    // Remplace "actif" — false = actif, true = archivé
+    
     @Column(nullable = false)
     private Boolean archived = false;
 

@@ -31,7 +31,6 @@ public class Client {
     @Column(nullable = false)
     private Boolean archived = false;
 
-    // ── Constructeur complet mis à jour ──
     public Client(Long id, User user, String numtel, String createdBy,
                   Set<Entreprise> entreprises, Boolean archived) {
         this.id = id;

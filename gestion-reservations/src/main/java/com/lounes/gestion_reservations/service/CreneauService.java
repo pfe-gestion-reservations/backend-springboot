@@ -33,12 +33,12 @@ public class CreneauService {
         if (dispos.isEmpty())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ce service n'est pas disponible ce jour !");
 
-        // Récupérer la durée depuis ConfigService si disponible, sinon depuis Service
+
         int duree = service.getConfig() != null && service.getConfig().getDureeMinutes() != null
                 ? service.getConfig().getDureeMinutes()
                 : service.getDureeMinutes();
 
-        // Réservations existantes sur ce service ce jour-là
+
         LocalDateTime debutJour = date.atStartOfDay();
         LocalDateTime finJour   = date.atTime(23, 59, 59);
         List<Reservation> reservations = reservationRepository

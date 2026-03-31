@@ -14,8 +14,7 @@ public class GerantRequest {
     @NotBlank
     @Email
     private String email;
-
-    private String password; // validation min 6 faite dans le service
+    private String password;
 
     public GerantRequest() {}
 

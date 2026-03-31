@@ -18,15 +18,12 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
     Optional<Client> findByUserIdAndArchivedTrue(Long userId);
     Optional<Client> findByNumtel(String numtel);
 
-    // Charge toutes les entreprises de chaque client en une seule requête
     @Query("SELECT DISTINCT c FROM Client c LEFT JOIN FETCH c.entreprises e LEFT JOIN FETCH e.secteur")
     List<Client> findAllWithEntreprises();
 
-    // Clients d'une entreprise spécifique
     @Query("SELECT DISTINCT c FROM Client c JOIN FETCH c.entreprises e LEFT JOIN FETCH e.secteur WHERE e.id = :entrepriseId")
     List<Client> findByEntrepriseId(Long entrepriseId);
 
-    // Vérifie si un client est déjà dans une entreprise donnée
     @Query("SELECT COUNT(c) > 0 FROM Client c JOIN c.entreprises e WHERE c.id = :clientId AND e.id = :entrepriseId")
     boolean isClientInEntreprise(Long clientId, Long entrepriseId);
 

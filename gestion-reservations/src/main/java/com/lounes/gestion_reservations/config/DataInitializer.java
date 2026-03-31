@@ -39,7 +39,7 @@ public class DataInitializer implements CommandLineRunner {
             admin.setPrenom("Super");
             admin.setEmail(adminEmail);
             admin.setPassword(passwordEncoder.encode("admin123"));
-            admin.setArchived(false);   // ← remplace setActif(true)
+            admin.setArchived(false);
             admin.setRoles(Set.of(superAdminRole));
             userRepository.save(admin);
             System.out.println("Super Admin créé : " + adminEmail);

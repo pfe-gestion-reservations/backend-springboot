@@ -16,7 +16,7 @@ public class ConfigServiceResponse {
     private Boolean fileAttenteActive;
     private Integer avanceReservationJours;
     private Integer annulationHeures;
-    private Boolean tarifParPersonne;  // false=fixe, true=par personne
+    private Boolean tarifParPersonne;
 
     public ConfigServiceResponse() {}
 

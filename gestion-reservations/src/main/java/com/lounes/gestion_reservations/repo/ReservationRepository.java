@@ -19,19 +19,15 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByEmployeId(Long employeId);
     List<Reservation> findByEmployeIdAndStatut(Long employeId, StatutReservation statut);
 
-    // Vérifie conflit : même service + chevauchement de créneau
     boolean existsByServiceIdAndHeureDebutAndStatutNot(
             Long serviceId, LocalDateTime heureDebut, StatutReservation statut);
 
-    // Créneaux occupés pour un service sur une période
     List<Reservation> findByServiceIdAndHeureDebutBetween(
             Long serviceId, LocalDateTime debut, LocalDateTime fin);
 
-    // Créneaux occupés pour une ressource (terrain, box...)
     List<Reservation> findByRessourceIdAndHeureDebutBetween(
             Long ressourceId, LocalDateTime debut, LocalDateTime fin);
 
-    // Dans ReservationRepository.java — ajouter :
     @Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.ressource.id = :ressourceId " +
             "AND r.statut <> com.lounes.gestion_reservations.model.StatutReservation.ANNULEE " +
             "AND r.heureDebut < :heureFin AND r.heureFin > :heureDebut " +
@@ -44,7 +40,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     void deleteByServiceId(Long serviceId);
     List<Reservation> findByServiceId(Long serviceId);
 
-    // Vérifie chevauchement pour un client sur un service donné
     @Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.client.id = :clientId " +
             "AND r.service.id = :serviceId " +
             "AND r.statut <> com.lounes.gestion_reservations.model.StatutReservation.ANNULEE " +
@@ -56,7 +51,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                              @Param("heureFin") LocalDateTime heureFin,
                              @Param("excludeId") Long excludeId);
 
-    // Vérifie chevauchement global pour un service (tous clients confondus)
+
     @Query("SELECT COUNT(r) > 0 FROM Reservation r WHERE r.service.id = :serviceId " +
             "AND r.statut <> com.lounes.gestion_reservations.model.StatutReservation.ANNULEE " +
             "AND r.heureDebut < :heureFin AND r.heureFin > :heureDebut " +

@@ -1,10 +1,6 @@
 package com.lounes.gestion_reservations.dto;
 
 public class EmployeCheckResponse {
-    // STATUTS :
-    // "NOUVEAU"          — email inconnu, créer un compte
-    // "LIBRE"            — a un compte employé mais archivé (libre)
-    // "OCCUPE"           — a un compte employé actif dans une autre entreprise
     private String statut;
     private String message;
     private Long userId;

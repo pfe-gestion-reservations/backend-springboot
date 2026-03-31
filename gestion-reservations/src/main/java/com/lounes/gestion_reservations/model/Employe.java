@@ -12,14 +12,14 @@ public class Employe {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.EAGER)   // EAGER : user toujours chargé
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     private String specialite;
 
-    @ManyToOne(fetch = FetchType.EAGER)  // EAGER : entreprise toujours chargée
-    @JoinColumn(name = "entreprise_id", nullable = true)  // nullable=true : employé peut être libre
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "entreprise_id", nullable = true)
     private Entreprise entreprise;
 
     @Column(nullable = false)

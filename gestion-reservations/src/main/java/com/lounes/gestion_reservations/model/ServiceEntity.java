@@ -21,14 +21,14 @@ public class ServiceEntity {
     @Column(nullable = false)
     private Integer dureeMinutes;
 
-    private Double tarif; // nullable = gratuit
+    private Double tarif;
 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "entreprise_id", nullable = false)
     private Entreprise entreprise;
 
-    // Relation vers la config (1-1)
+
     @OneToOne(mappedBy = "service", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private ConfigService config;
 

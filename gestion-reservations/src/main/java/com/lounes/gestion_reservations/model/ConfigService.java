@@ -38,11 +38,9 @@ public class ConfigService {
 
     private Integer avanceReservationJours;
     private Integer annulationHeures;
-
-    // false = tarif fixe par réservation (ex: terrain padel = 20 DT peu importe le nombre)
-    // true  = tarif × nombre de personnes  (ex: salle = 5 DT × 8 personnes = 40 DT)
     @Column(nullable = false)
     private Boolean tarifParPersonne = false;
+
 
     public Long getId()                             { return id; }
     public void setId(Long id)                      { this.id = id; }

@@ -7,10 +7,10 @@ import java.time.LocalDateTime;
 public class CreateReservationRequest {
     private Long clientId;
     private Long serviceId;
-    private Long employeId;      // nullable
-    private Long ressourceId;    // nullable
+    private Long employeId;
+    private Long ressourceId;
     private LocalDateTime heureDebut;
-    private Integer nombrePersonnes; // nullable → défaut 1
+    private Integer nombrePersonnes;
     private String notes;
 
     public CreateReservationRequest() {

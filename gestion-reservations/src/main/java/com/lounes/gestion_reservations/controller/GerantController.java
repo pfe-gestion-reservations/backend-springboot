@@ -17,32 +17,35 @@ import java.util.List;
 public class GerantController {
 
     @Autowired private GerantService gerantService;
-
+    //recuperer tous les gerants
     @GetMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<GerantResponse>> getAll() {
         return ResponseEntity.ok(gerantService.getAll());
     }
 
+    //recuperer les gerants disponibbl/libres
     @GetMapping("/disponibles")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<GerantResponse>> getDisponibles() {
         return ResponseEntity.ok(gerantService.getDisponibles());
     }
 
+    //recuperer le gerant par id
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<GerantResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(gerantService.getById(id));
     }
 
-    // Vérifier email avant création gérant
+    //verifier le mail si existe ou pas avant d ajouter le gerant
     @GetMapping("/check-email")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<EmployeCheckResponse> checkEmail(@RequestParam String email) {
         return ResponseEntity.ok(gerantService.checkEmail(email));
     }
 
+    //maj gerant
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> update(@PathVariable Long id,
@@ -54,7 +57,7 @@ public class GerantController {
         }
     }
 
-    // Archiver un gérant — remplaçantId accepté en query param OU dans le body
+    //archiver gerant + ajouter son remplacant
     @PatchMapping("/{id}/archiver")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> archiver(@PathVariable Long id,
@@ -65,19 +68,20 @@ public class GerantController {
         return ResponseEntity.ok(gerantService.archiver(id, rId));
     }
 
+    //desarchiver gerant
     @PatchMapping("/{id}/desarchiver")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<GerantResponse> desarchiver(@PathVariable Long id) {
         return ResponseEntity.ok(gerantService.desarchiver(id));
     }
-
+    //supprimer gerant
     @DeleteMapping("/{id}/supprimer")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> supprimerDefinitivement(@PathVariable Long id) {
         gerantService.supprimerDefinitivement(id);
         return ResponseEntity.ok("Gérant supprimé définitivement.");
     }
-
+    //supprimer gerant
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id) {

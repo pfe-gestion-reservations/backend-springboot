@@ -28,7 +28,6 @@ public class ServiceService {
     @Autowired private FileAttenteRepository fileAttenteRepository;
     @Autowired private DisponibiliteRepository disponibiliteRepository;
 
-    // ── Helpers ────────────────────────────────────────────
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -64,7 +63,6 @@ public class ServiceService {
         );
     }
 
-    // ── GET ALL ────────────────────────────────────────────
 
     public List<ServiceResponse> getAll() {
         User user = getCurrentUser();
@@ -102,7 +100,6 @@ public class ServiceService {
                 .map(this::toResponse).collect(Collectors.toList());
     }
 
-    // ── CREATE ─────────────────────────────────────────────
 
     @Transactional
     public ServiceResponse create(ServiceRequest request) {
@@ -187,7 +184,6 @@ public class ServiceService {
         return toResponse(service);
     }
 
-    // ── UPDATE ─────────────────────────────────────────────
 
     public ServiceResponse update(Long id, ServiceRequest request) {
         User user = getCurrentUser();
@@ -210,19 +206,16 @@ public class ServiceService {
         return toResponse(serviceRepository.save(service));
     }
 
-    // ── DELETE ─────────────────────────────────────────────
 
     @Transactional
     public void delete(Long id) {
         ServiceEntity service = serviceRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service non trouvé"));
 
-        // Récupérer le type de service
         boolean isRessourcePartagee = configServiceRepository.findByServiceId(id)
                 .map(c -> c.getTypeService() == TypeService.RESSOURCE_PARTAGEE)
                 .orElse(false);
 
-        // Vérifier les liaisons bloquantes (réservations + file d'attente)
         boolean hasReservations = !reservationRepository.findByServiceId(id).isEmpty();
         boolean hasFileAttente  = !fileAttenteRepository.findByStatutNot(StatutFileAttente.ANNULE)
                 .stream().filter(fa -> fa.getService().getId().equals(id)).toList().isEmpty();
@@ -243,12 +236,9 @@ public class ServiceService {
                             + String.join(", ", details) + ".");
         }
 
-        // Suppression dans le bon ordre
         disponibiliteRepository.findByServiceId(id)
                 .forEach(d -> disponibiliteRepository.deleteById(d.getId()));
 
-        // Pour RESSOURCE_PARTAGEE : supprimer les ressources automatiquement
-        // Pour les autres types : les ressources ne devraient pas exister, mais on les supprime aussi
         ressourceRepository.findByServiceId(id)
                 .forEach(r -> ressourceRepository.deleteById(r.getId()));
 

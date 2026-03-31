@@ -24,7 +24,6 @@ public class DisponibiliteService {
     @Autowired private DisponibiliteRepository disponibiliteRepository;
     @Autowired private ServiceRepository serviceRepository;
 
-    // ── Vérifie le chevauchement : nouvelle fin > existante début ET nouveau début < existante fin
     private void checkChevauchement(Long serviceId, String jour, String heureDebut, String heureFin, Long excludeId) {
         LocalTime newDebut = LocalTime.parse(heureDebut);
         LocalTime newFin   = LocalTime.parse(heureFin);
@@ -96,7 +95,7 @@ public class DisponibiliteService {
                 request.getJour().name(),
                 request.getHeureDebut().toString(),
                 request.getHeureFin().toString(),
-                id  // exclure la dispo en cours de modification
+                id
         );
 
         dispo.setJour(request.getJour());
@@ -115,7 +114,6 @@ public class DisponibiliteService {
         LocalTime dispoFin   = dispo.getHeureFin();
         Long serviceId       = dispo.getService().getId();
 
-        // Réservations actives qui tombent dans ce créneau
         List<Reservation> resLiees = reservationRepository.findByServiceId(serviceId).stream()
                 .filter(r -> r.getStatut() != StatutReservation.ANNULEE
                         && r.getStatut() != StatutReservation.TERMINEE)
@@ -125,7 +123,7 @@ public class DisponibiliteService {
                 })
                 .collect(Collectors.toList());
 
-        // Entrées de file d'attente actives sur ce créneau
+
         List<FileAttente> fileLiees = fileAttenteRepository.findByServiceId(serviceId).stream()
                 .filter(f -> f.getStatut() == StatutFileAttente.EN_ATTENTE
                         || f.getStatut() == StatutFileAttente.APPELE)
@@ -154,7 +152,7 @@ public class DisponibiliteService {
         LocalTime dispoFin   = dispo.getHeureFin();
         Long serviceId       = dispo.getService().getId();
 
-        // Annuler les réservations actives liées
+
         reservationRepository.findByServiceId(serviceId).stream()
                 .filter(r -> r.getStatut() != StatutReservation.ANNULEE
                         && r.getStatut() != StatutReservation.TERMINEE)
@@ -167,7 +165,6 @@ public class DisponibiliteService {
                     reservationRepository.save(r);
                 });
 
-        // Annuler les files d'attente actives liées
         fileAttenteRepository.findByServiceId(serviceId).stream()
                 .filter(f -> f.getStatut() == StatutFileAttente.EN_ATTENTE
                         || f.getStatut() == StatutFileAttente.APPELE)
