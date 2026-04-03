@@ -203,6 +203,10 @@ public class FileAttenteService {
 
 
     private FileAttenteResponse toResponse(FileAttente fa) {
+        Integer dureeMinutes = configServiceRepository
+                .findByServiceId(fa.getService().getId())
+                .map(ConfigService::getDureeMinutes)
+                .orElse(null);
         return new FileAttenteResponse(
                 fa.getId(),
                 fa.getClient().getUser().getNom(),
@@ -220,8 +224,9 @@ public class FileAttenteService {
                         ? fa.getReservation().getRessource().getNom() : null,
                 fa.getHeureDebut(),
                 fa.getHeureArrivee(),
+                fa.getHeureEstimee(),
                 fa.getReservation() != null ? fa.getReservation().getHeureDebut() : null,
-                fa.getStatut()
+                fa.getStatut(),dureeMinutes
         );
     }
 }

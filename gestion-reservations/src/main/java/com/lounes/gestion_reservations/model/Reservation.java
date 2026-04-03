@@ -25,12 +25,10 @@ public class Reservation {
     @JoinColumn(name = "entreprise_id", nullable = false)
     private Entreprise entreprise;
 
-    // Secrétaire — nullable selon ConfigService
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employe_id")
     private Employe employe;
 
-    // Terrain, box, salle... — nullable selon ConfigService
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ressource_id")
     private Ressource ressource;
@@ -46,7 +44,6 @@ public class Reservation {
 
     private Double prixTotal;
 
-    private String codeConfirmation;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -142,13 +139,6 @@ public class Reservation {
         this.prixTotal = prixTotal;
     }
 
-    public String getCodeConfirmation() {
-        return codeConfirmation;
-    }
-
-    public void setCodeConfirmation(String codeConfirmation) {
-        this.codeConfirmation = codeConfirmation;
-    }
 
     public StatutReservation getStatut() {
         return statut;
@@ -182,7 +172,7 @@ public class Reservation {
         this.rappelEnvoye = rappelEnvoye;
     }
 
-    public Reservation(Long id, Client client, ServiceEntity service, Entreprise entreprise, Employe employe, Ressource ressource, LocalDateTime heureDebut, LocalDateTime heureFin, Integer nombrePersonnes, Double prixTotal, String codeConfirmation, StatutReservation statut, String notes, LocalDateTime createdAt, Boolean rappelEnvoye) {
+    public Reservation(Long id, Client client, ServiceEntity service, Entreprise entreprise, Employe employe, Ressource ressource, LocalDateTime heureDebut, LocalDateTime heureFin, Integer nombrePersonnes, Double prixTotal, StatutReservation statut, String notes, LocalDateTime createdAt, Boolean rappelEnvoye) {
         this.id = id;
         this.client = client;
         this.service = service;
@@ -193,7 +183,6 @@ public class Reservation {
         this.heureFin = heureFin;
         this.nombrePersonnes = nombrePersonnes;
         this.prixTotal = prixTotal;
-        this.codeConfirmation = codeConfirmation;
         this.statut = statut;
         this.notes = notes;
         this.createdAt = createdAt;

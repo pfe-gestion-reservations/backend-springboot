@@ -20,8 +20,10 @@ public class FileAttenteResponse {
     private String ressourceNom;
     private LocalDateTime heureDebut;
     private LocalDateTime heureArrivee;
+    private LocalDateTime heureEstimee;
     private LocalDateTime dateHeureRdv;
     private StatutFileAttente statut;
+    private Integer dureeMinutes;
 
     public FileAttenteResponse() {}
 
@@ -32,7 +34,8 @@ public class FileAttenteResponse {
                                Long reservationId,
                                String ressourceNom,
                                LocalDateTime heureDebut, LocalDateTime heureArrivee,
-                               LocalDateTime dateHeureRdv, StatutFileAttente statut) {
+                               LocalDateTime heureEstimee,
+                               LocalDateTime dateHeureRdv, StatutFileAttente statut, Integer dureeMinutes) {
         this.id = id;
         this.clientNom = clientNom; this.clientPrenom = clientPrenom; this.clientId = clientId;
         this.employeNom = employeNom; this.employePrenom = employePrenom; this.employeId = employeId;
@@ -41,24 +44,27 @@ public class FileAttenteResponse {
         this.reservationId = reservationId;
         this.ressourceNom = ressourceNom;
         this.heureDebut = heureDebut; this.heureArrivee = heureArrivee;
-        this.dateHeureRdv = dateHeureRdv; this.statut = statut;
+        this.heureEstimee = heureEstimee;
+        this.dateHeureRdv = dateHeureRdv; this.statut = statut; this.dureeMinutes = dureeMinutes;
     }
 
-    public Long getId()                    { return id; }
-    public String getClientNom()           { return clientNom; }
-    public String getClientPrenom()        { return clientPrenom; }
-    public Long getClientId()              { return clientId; }
-    public String getEmployeNom()          { return employeNom; }
-    public String getEmployePrenom()       { return employePrenom; }
-    public Long getEmployeId()             { return employeId; }
-    public String getServiceNom()          { return serviceNom; }
-    public Long getServiceId()             { return serviceId; }
-    public String getEntrepriseNom()       { return entrepriseNom; }
-    public Long getEntrepriseId()          { return entrepriseId; }
-    public Long getReservationId()         { return reservationId; }
-    public String getRessourceNom()        { return ressourceNom; }
-    public LocalDateTime getHeureDebut()   { return heureDebut; }
-    public LocalDateTime getHeureArrivee() { return heureArrivee; }
-    public LocalDateTime getDateHeureRdv() { return dateHeureRdv; }
-    public StatutFileAttente getStatut()   { return statut; }
+    public Long getId()                      { return id; }
+    public String getClientNom()             { return clientNom; }
+    public String getClientPrenom()          { return clientPrenom; }
+    public Long getClientId()                { return clientId; }
+    public String getEmployeNom()            { return employeNom; }
+    public String getEmployePrenom()         { return employePrenom; }
+    public Long getEmployeId()               { return employeId; }
+    public String getServiceNom()            { return serviceNom; }
+    public Long getServiceId()               { return serviceId; }
+    public String getEntrepriseNom()         { return entrepriseNom; }
+    public Long getEntrepriseId()            { return entrepriseId; }
+    public Long getReservationId()           { return reservationId; }
+    public String getRessourceNom()          { return ressourceNom; }
+    public LocalDateTime getHeureDebut()     { return heureDebut; }
+    public LocalDateTime getHeureArrivee()   { return heureArrivee; }
+    public LocalDateTime getHeureEstimee()   { return heureEstimee; }
+    public LocalDateTime getDateHeureRdv()   { return dateHeureRdv; }
+    public StatutFileAttente getStatut()     { return statut; }
+    public Integer getDureeMinutes() { return dureeMinutes; }
 }

@@ -35,6 +35,8 @@ public class FileAttente {
 
     private LocalDateTime heureArrivee;
 
+    private LocalDateTime heureEstimee;
+
     @Enumerated(EnumType.STRING)
     private StatutFileAttente statut = StatutFileAttente.EN_ATTENTE;
 
@@ -56,6 +58,8 @@ public class FileAttente {
     public void setHeureDebut(LocalDateTime h)   { this.heureDebut = h; }
     public LocalDateTime getHeureArrivee()       { return heureArrivee; }
     public void setHeureArrivee(LocalDateTime h) { this.heureArrivee = h; }
+    public LocalDateTime getHeureEstimee()       { return heureEstimee; }
+    public void setHeureEstimee(LocalDateTime h) { this.heureEstimee = h; }
     public StatutFileAttente getStatut()         { return statut; }
     public void setStatut(StatutFileAttente s)   { this.statut = s; }
 }

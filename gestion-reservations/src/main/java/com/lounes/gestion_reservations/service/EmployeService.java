@@ -61,7 +61,6 @@ public class EmployeService {
         result.put("nom", user.getNom());
         result.put("prenom", user.getPrenom());
         result.put("email", user.getEmail());
-        result.put("specialite", emp.getSpecialite() != null ? emp.getSpecialite() : "");
         result.put("archived", user.getArchived());
 
         if (Boolean.TRUE.equals(user.getArchived())) {
@@ -82,7 +81,7 @@ public class EmployeService {
     }
 
     @Transactional
-    public Map<String, Object> rattacher(Long userId, Long entrepriseId, String specialite) {
+    public Map<String, Object> rattacher(Long userId, Long entrepriseId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur non trouvé"));
         Employe emp = employeRepository.findByUser(user)
@@ -96,14 +95,13 @@ public class EmployeService {
         }
 
         emp.setEntreprise(entreprise);
-        if (specialite != null && !specialite.isBlank()) emp.setSpecialite(specialite);
         employeRepository.save(emp);
         return Map.of("message", "Employé rattaché avec succès", "employeId", emp.getId());
     }
 
 
     @Transactional
-    public Map<String, Object> rattacherByEmail(String email, Long entrepriseId, String specialite) {
+    public Map<String, Object> rattacherByEmail(String email, Long entrepriseId) {
         Employe emp = employeRepository.findByUserEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Aucun employé trouvé avec l'email : " + email));
@@ -126,7 +124,6 @@ public class EmployeService {
         }
 
         emp.setEntreprise(entreprise);
-        if (specialite != null && !specialite.isBlank()) emp.setSpecialite(specialite);
         Employe saved = employeRepository.save(emp);
         return Map.of("message", "Employé rattaché avec succès", "employe", toResponse(saved));
     }
@@ -149,9 +146,6 @@ public class EmployeService {
             Employe emp = existingEmp.get();
             if (emp.getEntreprise() == null) {
                 emp.setEntreprise(entreprise);
-                if (request.getSpecialite() != null && !request.getSpecialite().isBlank()) {
-                    emp.setSpecialite(request.getSpecialite());
-                }
                 return ResponseEntity.ok(toResponse(employeRepository.save(emp)));
             } else if (emp.getEntreprise().getId().equals(entreprise.getId())) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -187,7 +181,6 @@ public class EmployeService {
 
         Employe employe = new Employe();
         employe.setUser(user);
-        employe.setSpecialite(request.getSpecialite());
         employe.setEntreprise(entreprise);
 
         return ResponseEntity.ok(toResponse(employeRepository.save(employe)));
@@ -243,7 +236,6 @@ public class EmployeService {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
 
-        employe.setSpecialite(request.getSpecialite());
         userRepository.save(user);
         return toResponse(employeRepository.save(employe));
     }
@@ -324,7 +316,6 @@ public class EmployeService {
                 employe.getUser().getNom(),
                 employe.getUser().getPrenom(),
                 employe.getUser().getEmail(),
-                employe.getSpecialite(),
                 employe.getUser().getArchived(),
                 entrepriseId,
                 entrepriseNom

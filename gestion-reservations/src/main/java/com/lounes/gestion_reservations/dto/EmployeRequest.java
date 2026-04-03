@@ -12,7 +12,6 @@ public class EmployeRequest {
     @Email
     private String email;
     private String password;
-    private String specialite;
     private Long entrepriseId;
 
     public String getNom() { return nom; }
@@ -23,8 +22,6 @@ public class EmployeRequest {
     public void setEmail(String email) { this.email = email; }
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
-    public String getSpecialite() { return specialite; }
-    public void setSpecialite(String specialite) { this.specialite = specialite; }
     public Long getEntrepriseId() { return entrepriseId; }
     public void setEntrepriseId(Long entrepriseId) { this.entrepriseId = entrepriseId; }
 }

@@ -57,13 +57,12 @@ public class EmployeController {
         String email      = (String) body.get("email");
         Long entrepriseId = body.get("entrepriseId") != null
                 ? Long.parseLong(body.get("entrepriseId").toString()) : null;
-        String specialite = (String) body.get("specialite");
 
         if (email == null || email.isBlank()) {
             return ResponseEntity.badRequest().body(
                     Map.of("message", "Le champ email est obligatoire"));
         }
-        return ResponseEntity.ok(employeService.rattacherByEmail(email, entrepriseId, specialite));
+        return ResponseEntity.ok(employeService.rattacherByEmail(email, entrepriseId));
     }
     //creer employe
     @PostMapping

@@ -16,7 +16,6 @@ public class Employe {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    private String specialite;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "entreprise_id", nullable = true)
@@ -29,8 +28,6 @@ public class Employe {
     public void setId(Long id)                 { this.id = id; }
     public User getUser()                      { return user; }
     public void setUser(User user)             { this.user = user; }
-    public String getSpecialite()              { return specialite; }
-    public void setSpecialite(String s)        { this.specialite = s; }
     public Entreprise getEntreprise()          { return entreprise; }
     public void setEntreprise(Entreprise e)    { this.entreprise = e; }
     public Boolean getArchived()               { return archived; }
@@ -38,10 +35,9 @@ public class Employe {
 
     public Employe() {}
 
-    public Employe(Long id, User user, String specialite, Entreprise entreprise, Boolean archived) {
+    public Employe(Long id, User user, Entreprise entreprise, Boolean archived) {
         this.id = id;
         this.user = user;
-        this.specialite = specialite;
         this.entreprise = entreprise;
         this.archived = archived;
     }
